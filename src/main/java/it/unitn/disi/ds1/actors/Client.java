@@ -1,4 +1,4 @@
-package it.unitn.disi.ds1;
+package it.unitn.disi.ds1.actors;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
@@ -7,6 +7,7 @@ import it.unitn.disi.ds1.messages.JoinCachesMsg;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Client actor
@@ -19,6 +20,10 @@ import java.util.List;
  * We can safely assume a client won't perform concurrent requests
  */
 public class Client extends AbstractActor {
+    /**
+     * Logger
+     */
+    private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     /**
      * List of all L2 cache servers it can communicate with
@@ -26,15 +31,21 @@ public class Client extends AbstractActor {
     private final List<ActorRef> caches;
 
     /**
+     * Client identifier
+     */
+    private final int id;
+
+    /**
      * Client constructor
      * Initialize the target cache servers with an empty array
      */
-    public Client() {
+    public Client(int id) {
+        this.id = id;
         this.caches = new ArrayList<>();
     }
 
-    static public Props props() {
-        return Props.create(Client.class, Client::new);
+    static public Props props(int id) {
+        return Props.create(Client.class, () -> new Client(id));
     }
 
     /**
@@ -43,7 +54,8 @@ public class Client extends AbstractActor {
      * @param msg message containing information about the joined cache servers
      */
     private void onJoinCachesMsg(JoinCachesMsg msg) {
-        caches.addAll(msg.caches);
+        this.caches.addAll(msg.caches);
+        LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
     }
 
     @Override

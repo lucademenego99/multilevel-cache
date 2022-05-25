@@ -2,29 +2,23 @@ package it.unitn.disi.ds1;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import it.unitn.disi.ds1.actors.Cache;
+import it.unitn.disi.ds1.actors.Client;
+import it.unitn.disi.ds1.actors.Database;
 import it.unitn.disi.ds1.messages.JoinCachesMsg;
 
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /***
  * Main class of the project
  */
 public class Main {
-
     /**
-     * Number of L1 caches
+     * Logger
      */
-    final static int N_L1 = 1;
-
-    /**
-     * Number of L2 caches associated to an L1 cache
-     */
-    final static int N_L2 = 1;
-
-    /**
-     * Number of clients assigned to an L2 cache
-     */
-    final static int N_CLIENTS = 1;
+    private final static Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     /***
      * Main function of the distributed systems project
@@ -33,6 +27,10 @@ public class Main {
     public static void main(String[] args) {
         // Create the actor system
         final ActorSystem system = ActorSystem.create("distributed-cache");
+
+        // Logger, TODO, maybe a better logger, at least a file where to save this?
+        LOGGER.setLevel(Level.INFO);
+        System.out.println("Log file will be available at " + Main.class.getClassLoader().getResource("logging.properties"));
 
         // Set up the main architecture of the distributed cache system
         // TODO: what should we return? Do we need to create an object containing all the actors?
@@ -53,28 +51,34 @@ public class Main {
      */
     private static void setupStructure(ActorSystem system) {
         System.out.println("Creating tree structure...");
+        LOGGER.info("Creating the tree structure...");
+        LOGGER.info("Starting with "  + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
+                Config.N_L2 + " associated caches each");
+
+        // ids
+        int id = 0;
 
         // Create the database
         HashMap<Integer, Integer> db = initializeDatabase();
-        ActorRef database = system.actorOf(Database.props(db), "database");
+        ActorRef database = system.actorOf(Database.props(id++, db), "database");
 
         // Create N_L1 cache servers
         List<ActorRef> l1Caches = new ArrayList<>();
-        for (int i = 0; i < N_L1; i++) {
-            l1Caches.add(system.actorOf(Cache.props(database), "l1-cache-" + i));
+        for (int i = 0; i < Config.N_L1; i++) {
+            l1Caches.add(system.actorOf(Cache.props(id++, database), "l1-cache-" + i));
         }
 
         // Create N_L2 cache servers
         for (int i = 0; i < l1Caches.size(); i++) {
             List<ActorRef> l2Caches = new ArrayList<>();
-            for (int j = 0; j < N_L2; j++) {
+            for (int j = 0; j < Config.N_L2; j++) {
                 // Create the L2 cache server
-                l2Caches.add(system.actorOf(Cache.props(database), "l2-cache-" + i + "-" + j));
+                l2Caches.add(system.actorOf(Cache.props(id++, database), "l2-cache-" + i + "-" + j));
 
                 // Create N_CLIENTS that will communicate with it
                 List<ActorRef> clients = new ArrayList<>();
-                for (int k = 0; k < N_CLIENTS; k++) {
-                    clients.add(system.actorOf(Client.props(), "client-" + j + "-" + k));
+                for (int k = 0; k < Config.N_CLIENTS; k++) {
+                    clients.add(system.actorOf(Client.props(id++), "client-" + j + "-" + k));
 
                     // Send the L2 cache server to the generated client
                     JoinCachesMsg cachesMsg = new JoinCachesMsg(new ArrayList<>(Collections.singletonList(l2Caches.get(j))));
@@ -93,6 +97,7 @@ public class Main {
         database.tell(l1CachesMsg, ActorRef.noSender());
 
         System.out.println("Created the tree structure");
+        LOGGER.info("Tree structure created");
     }
 
     /**

@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Message to handle cache servers joining the distributed cache architecture
- * TODO: verify it works even if the class is not static
  */
 public class JoinCachesMsg implements Serializable {
     /**
