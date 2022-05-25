@@ -1,0 +1,21 @@
+# Ignore git folder
+.git
+
+# Ignore markdown files
+.*md
+
+# Gradle files
+.gradle
+gradle/
+
+# folders
+bin/
+build/
+.settings/
+.idea/
+
+# Dockerfile
+Dockerfile
+
+# Others
+.project

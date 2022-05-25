@@ -1,0 +1,16 @@
+# Gradle files
+.gradle
+gradle/
+
+# folders
+bin/
+build/
+.settings/
+.idea/
+
+# Others
+.project
+.gradle
+.idea
+.settings
+.classpath
