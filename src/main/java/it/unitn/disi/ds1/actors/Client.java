@@ -1,13 +1,12 @@
 package it.unitn.disi.ds1.actors;
 
-import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.messages.JoinCachesMsg;
+import it.unitn.disi.ds1.messages.RecoveryMessage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Client actor
@@ -19,31 +18,26 @@ import java.util.logging.Logger;
  *
  * We can safely assume a client won't perform concurrent requests
  */
-public class Client extends AbstractActor {
-    /**
-     * Logger
-     */
-    private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
-
+public class Client extends Actor {
     /**
      * List of all L2 cache servers it can communicate with
      */
     private final List<ActorRef> caches;
 
     /**
-     * Client identifier
-     */
-    private final int id;
-
-    /**
      * Client constructor
      * Initialize the target cache servers with an empty array
      */
     public Client(int id) {
-        this.id = id;
+        super(id, Client.class.getName());
         this.caches = new ArrayList<>();
     }
 
+    /**
+     * Client static builder
+     * @param id identifier of the client
+     * @return Client instance
+     */
     static public Props props(int id) {
         return Props.create(Client.class, () -> new Client(id));
     }
@@ -57,6 +51,13 @@ public class Client extends AbstractActor {
         this.caches.addAll(msg.caches);
         LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
     }
+
+    /**
+     * Handler of the Recovery message
+     * @param msg recovery message
+     */
+    @Override
+    protected void onRecoveryMessage(RecoveryMessage msg){};
 
     @Override
     public Receive createReceive() {

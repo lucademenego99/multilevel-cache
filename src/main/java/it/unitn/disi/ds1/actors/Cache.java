@@ -1,16 +1,13 @@
 package it.unitn.disi.ds1.actors;
 
-import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.dispatch.Recover;
-import it.unitn.disi.ds1.Config;
-import it.unitn.disi.ds1.Main;
 import it.unitn.disi.ds1.messages.*;
 
-import java.io.Serializable;
-import java.util.*;
-import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Cache server actor
@@ -28,12 +25,7 @@ import java.util.logging.Logger;
  *
  * This actor can crash.
  */
-public class Cache extends AbstractActor {
-    /**
-     * Logger
-     */
-    private final static Logger LOGGER = Logger.getLogger(Cache.class.getName());
-
+public class Cache extends Actor {
     /**
      * Reference to the master database actor
      */
@@ -48,47 +40,34 @@ public class Cache extends AbstractActor {
     /**
      * Cached entries of the database
      */
-    private final HashMap<Integer, Integer> cachedDatabase;
+    private final Map<Integer, Integer> cachedDatabase;
 
     /**
-     * Cache id
-     */
-    private final int id;
-
-    /**
-     * Cache constructor
+     * Cache constructor, by default the cache is an L2
      * Initialize all variables
      * @param id Cache identifier
      * @param database Reference to the master database actor
+     * @param isL2 whether the cache is an L2 cache
      */
-    public Cache(int id, ActorRef database) {
+    public Cache(int id, ActorRef database, boolean isL2) {
+        super(id, Cache.class.getName());
         this.database = database;
         this.caches = new ArrayList<>();
         this.cachedDatabase = new HashMap<>();
-        this.id = id;
-    }
-
-    static public Props props(int id, ActorRef database) {
-        return Props.create(Cache.class, () -> new Cache(id, database));
+        if(isL2){
+            this.getContext().become(L2Cache());
+        }
     }
 
     /**
-     * Multicast method
-     * Just multicast one serializable message to a set of nodes
-     * @param msg message
-     * @param multicastGroup group to whom send the message
-     * @return
+     * Static class builder
+     * @param id identifier
+     * @param database reference to the database
+     * @param isL2 whether the cache is an L2 cache
+     * @return Cache instance
      */
-    private void multicast(Serializable msg, List<ActorRef> multicastGroup) {
-        for (ActorRef p: multicastGroup) {
-            if (!p.equals(getSelf())) {
-                p.tell(msg, getSelf());
-
-                // simulate network delays using sleep
-                try { Thread.sleep(Config.RANDOM.nextInt(Config.NETWORK_DELAY_MS)); }
-                catch (InterruptedException e) { e.printStackTrace(); }
-            }
-        }
+    static public Props props(int id, ActorRef database, boolean isL2) {
+        return Props.create(Cache.class, () -> new Cache(id, database, isL2));
     }
 
     /**
@@ -105,7 +84,7 @@ public class Cache extends AbstractActor {
      */
     private void onJoinCachesMsg(JoinCachesMsg msg) {
         this.caches.addAll(msg.caches);
-        LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " children peers with ID " + this.id);
+        this.LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " children peers with ID " + this.id);
     }
 
     /**
@@ -117,12 +96,12 @@ public class Cache extends AbstractActor {
     private void onReadMessage(ReadMessage msg){
         if(this.cachedDatabase.containsKey(msg.requestKey)){
             // TODO generate the answer to the sender
-            LOGGER.info(getSelf().path().name() + ": cache hit with ID " + this.id);
+            this.LOGGER.info(getSelf().path().name() + ": cache hit with ID " + this.id);
         }else{
             // TODO ask to the above layers
             // TODO how can we discriminate which cache is which? I believe it is a good way to discriminate using
             // Classes, so Cache is Abstract and there are L1 and L2 caches which are specializations
-            LOGGER.info(getSelf().path().name() + ": cache miss, asking to the parent with ID " + this.id);
+            this.LOGGER.info(getSelf().path().name() + ": cache miss, asking to the parent with ID " + this.id);
         }
     }
 
@@ -137,7 +116,6 @@ public class Cache extends AbstractActor {
         LOGGER.info(getSelf().path().name() + ": forwarding the message to the parent with ID " + this.id);
     }
 
-
     /**
      * Handler of the Recovery message
      * In order to avoid issues, when one node recovers from crashes he forgot
@@ -146,12 +124,13 @@ public class Cache extends AbstractActor {
      *
      * @param msg write message
      */
-    private void onRecoveryMessage(RecoveryMessage msg){
+    @Override
+    protected void onRecoveryMessage(RecoveryMessage msg){
         // Empty the local cache
         this.clearCache();
         // TODO maybe a better way to handle it since we may know whether one node is L1 or L2?
-        multicast(new FlushMessage(), this.caches);
-        LOGGER.info(getSelf().path().name() + ": recovering: flushing the cache and multicast flush with ID " + this.id);
+        this.multicast(new FlushMessage(), this.caches);
+        this.LOGGER.info(getSelf().path().name() + ": recovering: flushing the cache and multicast flush with ID " + this.id);
     }
 
     /**
@@ -162,11 +141,11 @@ public class Cache extends AbstractActor {
     private void onFlushMessage(FlushMessage msg){
         // Empty the local cache
         this.clearCache();
-        LOGGER.info(getSelf().path().name() + ": flushing the cache with ID " + this.id);
+        this.LOGGER.info(getSelf().path().name() + ": flushing the cache with ID " + this.id);
     }
 
     /**
-     * Create receive method
+     * Create receive method, by default the cache behaves like a L1 cache
      * @return message matcher
      */
     @Override
@@ -177,6 +156,17 @@ public class Cache extends AbstractActor {
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .match(FlushMessage.class, this::onFlushMessage)
+                .build();
+    }
+
+
+    /**
+     * L2 cache behaviour
+     * @return
+     */
+    public Receive L2Cache() {
+        return receiveBuilder()
+                .matchAny(msg -> {})
                 .build();
     }
 }
