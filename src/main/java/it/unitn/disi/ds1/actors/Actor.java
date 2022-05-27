@@ -3,8 +3,7 @@ package it.unitn.disi.ds1.actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import it.unitn.disi.ds1.Config;
-import it.unitn.disi.ds1.messages.RecoveryMessage;
-import it.unitn.disi.ds1.messages.TokenMessage;
+import it.unitn.disi.ds1.messages.*;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -90,8 +89,8 @@ public abstract class Actor extends AbstractActor {
      * Send the token to all the peers
      * @param peers List of peers
      */
-    protected void sendTokens(List<ActorRef> peers) {
-        this.LOGGER.info(this.LOGGER.getName() + " with id " + this.id +" sending tokens");
+    private void sendTokens(List<ActorRef> peers) {
+        this.LOGGER.info(getSelf().path().name() + " with id " + this.id +" sending tokens");
         TokenMessage t = new TokenMessage(this.snapshotId);
         this.multicast(t, peers);
     }
@@ -100,8 +99,8 @@ public abstract class Actor extends AbstractActor {
      * Tells whether the snapshot has ended
      * @param peers
      */
-    protected boolean snapshotEnded(List<ActorRef> peers){
-        this.LOGGER.info(this.LOGGER.getName() + " with id " + this.id +" has ended the snapshot");
+    private boolean snapshotEnded(List<ActorRef> peers){
+        this.LOGGER.info(getSelf().path().name() + " with id " + this.id +" has ended the snapshot");
         return this.tokensReceived.containsAll(peers);
     }
 
@@ -109,14 +108,77 @@ public abstract class Actor extends AbstractActor {
      * Capture the current data within the system
      * @param data either the cache or the database
      */
-    protected void captureState(Map data) {
-        this.LOGGER.info(this.LOGGER.getName() + " with id" + this.id + " snapId: "+ this.snapshotId + " current data: " + this.currentCache + " data in transit" + this.dataInTransit);
+    private void captureState(Map data) {
         // State set to captured
         this.stateCaptured = true;
         // This means that the snapshot is not stored yet.
         this.currentCache = Collections.unmodifiableMap(data);
         // Add itself to the tokens received
         this.tokensReceived.add(getSelf());
+        // Log the info
+        this.LOGGER.info(getSelf().path().name() + " with id " + this.id + " snapId: "+ this.snapshotId + " current data: " + this.currentCache + " data in transit " + this.dataInTransit);
+    }
+
+    /**
+     * OnToken method
+     * Define what the actor does when the token message is received
+     * @param token
+     */
+    protected void onToken(TokenMessage token, Map data, List<ActorRef> peers) {
+        // When the token as been received
+        this.snapshotId = token.snapId;
+
+        // Manage the token reception, the first one should start the
+        // snapshot and the last token needs to stop the algorithm
+
+        // Add the sender to the getSender
+        this.tokensReceived.add(getSender());
+
+        if(!this.stateCaptured){
+            // If I am not in the snapshot I enter it
+            this.captureState(data);
+            // I send the tokens
+            this.sendTokens(peers);
+        }
+
+        if(this.snapshotEnded(peers)){
+            // Terminates the snapshot
+            this.LOGGER.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: "+ this.snapshotId + " state: " + this.currentCache + this.dataInTransit);
+            this.terminateSnapshot();
+        }
+    }
+
+    abstract protected void onReadMessage(ReadMessage msg);
+
+    abstract protected void onWriteMessage(WriteMessage msg);
+
+    abstract protected void onCriticalReadMessage(CriticalReadMessage msg);
+
+    abstract protected void onCriticalWriteMessage(CriticalWriteMessage msg);
+
+    abstract protected void onJoinCachesMessage(JoinCachesMessage msg);
+
+    /**
+     * OnStartShapshot
+     * Starts a snapshot
+     * @param msg start snapshot message
+     */
+    protected void onStartSnapshot(StartSnapshotMessage msg, Map data, List<ActorRef> peers) {
+        // we've been asked to initiate a snapshot
+        this.snapshotId += 1;
+        this.LOGGER.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: " + this.snapshotId + " starting a snapshot");
+        this.captureState(data);
+        this.sendTokens(peers);
+    }
+
+    /**
+     * Terminates the snapshot
+     */
+    private void terminateSnapshot(){
+        this.stateCaptured = false;
+        this.currentCache = new HashMap<>();
+        this.dataInTransit = new HashMap<>();
+        this.tokensReceived.clear();
     }
 
     /**

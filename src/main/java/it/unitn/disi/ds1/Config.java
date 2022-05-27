@@ -14,17 +14,17 @@ public class Config {
     /**
      * Number of L1 caches
      */
-    public final static int N_L1 = 1;
+    public final static int N_L1 = 3;
 
     /**
      * Number of L2 caches associated to an L1 cache
      */
-    public final static int N_L2 = 1;
+    public final static int N_L2 = 4;
 
     /**
      * Number of clients assigned to an L2 cache
      */
-    public final static int N_CLIENTS = 1;
+    public final static int N_CLIENTS = 2;
 
     /**
      * Random number generator

@@ -2,10 +2,10 @@ package it.unitn.disi.ds1.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import it.unitn.disi.ds1.messages.JoinCachesMsg;
-import it.unitn.disi.ds1.messages.RecoveryMessage;
+import it.unitn.disi.ds1.messages.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -63,13 +63,51 @@ public class Database extends Actor {
     }
 
     /**
-     * Handler of JoinCachesMsg message.
+     * Handler of JoinCachesMessage message.
      * Add all the joined caches as target for queries
      * @param msg message containing information about the joined cache servers
      */
-    private void onJoinCachesMsg(JoinCachesMsg msg) {
+    @Override
+    protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
         LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
+    }
+
+    /**
+     * Handler of the ReadMessage message.
+     * Get the value for the specified key and send back the response to the sender
+     * @param msg message containing the queried key and the list of the communication hops
+     */
+    @Override
+    protected void onReadMessage(ReadMessage msg) {
+        // Generate a new ArrayList from the message hops
+        List<ActorRef> newHops = new ArrayList<>(msg.hops);
+
+        // Remove the next hop from the new hops array
+        newHops.remove(newHops.size() - 1);
+
+        // Generate a response message containing the response and the new hops array
+        ResponseMessage responseMessage = new ResponseMessage(Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey)), newHops);
+
+        // Send the response back to the sender
+        getSender().tell(responseMessage, getSelf());
+
+        this.LOGGER.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name());
+    }
+
+    @Override
+    protected void onWriteMessage(WriteMessage msg) {
+
+    }
+
+    @Override
+    protected void onCriticalReadMessage(CriticalReadMessage msg) {
+
+    }
+
+    @Override
+    protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
+
     }
 
     /**
@@ -82,7 +120,10 @@ public class Database extends Actor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(JoinCachesMsg.class, this::onJoinCachesMsg)
+                .match(JoinCachesMessage.class, this::onJoinCachesMessage)
+                .match(TokenMessage.class, msg -> onToken(msg, this.database, this.caches))
+                .match(StartSnapshotMessage.class, msg -> onStartSnapshot(msg, this.database, this.caches))
+                .match(ReadMessage.class, this::onReadMessage)
                 .build();
     }
 }

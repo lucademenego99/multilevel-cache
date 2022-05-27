@@ -1,5 +1,6 @@
 package it.unitn.disi.ds1.structures;
 
+import akka.actor.ActorRef;
 import it.unitn.disi.ds1.actors.Actor;
 
 import java.util.ArrayList;
@@ -8,34 +9,36 @@ import java.util.List;
 public class DistributedCacheNode {
     public ArrayList<DistributedCacheNode> children;
     public DistributedCacheNode parent;
-    public Actor actor;
+    public ActorRef actor;
 
-    public DistributedCacheNode(Actor actor, DistributedCacheNode parent) {
+    public DistributedCacheNode(ActorRef actor, DistributedCacheNode parent) {
         this.actor = actor;
         this.parent = parent;
         children = new ArrayList<>();
     }
 
-    public void put(Actor newActor) {
+    public void put(ActorRef newActor) {
         DistributedCacheNode newNode = new DistributedCacheNode(newActor, this);
         children.add(newNode);
     }
 
-    public void putAll(List<Actor> newActors) {
+    public void putAll(List<ActorRef> newActors) {
         ArrayList<DistributedCacheNode> newNodes = new ArrayList<>();
-        for (Actor actor : newActors) {
+        for (ActorRef actor : newActors) {
             newNodes.add(new DistributedCacheNode(actor, this));
         }
         children.addAll(newNodes);
     }
 
-    @Override
-    public String toString() {
-        StringBuilder res = new StringBuilder("\t" + actor.id);
+    public String toString(int depth) {
+        StringBuilder res = new StringBuilder(actor.path().name() + "\n");
         if (!children.isEmpty()) {
             for (DistributedCacheNode child :
                     children) {
-                res.append("\n\t" + child.toString());
+                for (int i = 0; i < depth; i++) {
+                    res.append("\t");
+                }
+                res.append(child.toString(depth+1));
             }
         }
         return res.toString();

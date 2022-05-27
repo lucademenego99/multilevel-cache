@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Message to handle cache servers joining the distributed cache architecture
  */
-public class JoinCachesMsg implements Serializable {
+public class JoinCachesMessage implements Serializable {
     /**
      * List of caches joining the architecture
      */
@@ -20,7 +20,7 @@ public class JoinCachesMsg implements Serializable {
      * Constructor of the message
      * @param group The group of caches joining the architecture
      */
-    public JoinCachesMsg(List<ActorRef> group) {
+    public JoinCachesMessage(List<ActorRef> group) {
         this.caches = Collections.unmodifiableList(new ArrayList<>(group));
     }
 }
