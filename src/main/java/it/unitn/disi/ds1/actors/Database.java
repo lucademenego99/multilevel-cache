@@ -97,7 +97,12 @@ public class Database extends Actor {
 
     @Override
     protected void onWriteMessage(WriteMessage msg) {
+        this.database.remove(msg.requestKey);
+        this.database.put(msg.requestKey, msg.modifiedValue);
 
+        this.LOGGER.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name());
+
+        multicast(new UpdateCacheMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue)), this.caches);
     }
 
     @Override
@@ -124,6 +129,7 @@ public class Database extends Actor {
                 .match(TokenMessage.class, msg -> onToken(msg, this.database, this.caches))
                 .match(StartSnapshotMessage.class, msg -> onStartSnapshot(msg, this.database, this.caches))
                 .match(ReadMessage.class, this::onReadMessage)
+                .match(WriteMessage.class, this::onWriteMessage)
                 .build();
     }
 }

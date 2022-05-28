@@ -163,8 +163,8 @@ public class Cache extends Actor {
      */
     @Override
     protected void onWriteMessage(WriteMessage msg) {
-        //TODO forward to the next layer or to the database
         LOGGER.info(getSelf().path().name() + ": forwarding the message to the parent with ID " + this.id);
+        this.parent.tell(msg, getSelf());
     }
 
     @Override
@@ -175,6 +175,22 @@ public class Cache extends Actor {
     @Override
     protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
 
+    }
+
+    protected void onUpdatedCacheMessage(UpdateCacheMessage msg) {
+        int updatedKey = (int) msg.values.keySet().toArray()[0];
+        int updatedValue = (int) msg.values.values().toArray()[0];
+
+        if (this.cachedDatabase.containsKey(updatedKey)) {
+            this.LOGGER.info(getSelf().path().name() + ": updating the cached value for key " + updatedKey);
+            this.cachedDatabase.remove(updatedKey);
+            this.cachedDatabase.put(updatedKey, updatedValue);
+        }
+
+        if (!this.caches.isEmpty()) {
+            this.LOGGER.info(getSelf().path().name() + ": forwarding the new value for " + updatedKey + " to lower L2 caches");
+            multicast(msg, this.caches);
+        }
     }
 
     /**
@@ -220,6 +236,7 @@ public class Cache extends Actor {
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(FlushMessage.class, this::onFlushMessage)
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
+                .match(UpdateCacheMessage.class, this::onUpdatedCacheMessage)
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
                         this.cachedDatabase,

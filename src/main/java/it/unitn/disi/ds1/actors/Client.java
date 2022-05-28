@@ -67,7 +67,10 @@ public class Client extends Actor {
 
     @Override
     protected void onWriteMessage(WriteMessage msg) {
-
+        WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue);
+        int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
+        LOGGER.info("Client is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
+        this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
     }
 
     @Override
@@ -103,6 +106,7 @@ public class Client extends Actor {
         return receiveBuilder()
                 .match(JoinCachesMessage.class, this::onJoinCachesMessage)
                 .match(ReadMessage.class, this::onReadMessage)
+                .match(WriteMessage.class, this::onWriteMessage)
                 .match(ResponseMessage.class, this::onResponseMessage)
                 .build();
     }

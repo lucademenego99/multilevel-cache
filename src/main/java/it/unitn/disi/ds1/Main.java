@@ -8,10 +8,11 @@ import it.unitn.disi.ds1.actors.Database;
 import it.unitn.disi.ds1.messages.JoinCachesMessage;
 import it.unitn.disi.ds1.messages.ReadMessage;
 import it.unitn.disi.ds1.messages.StartSnapshotMessage;
+import it.unitn.disi.ds1.messages.WriteMessage;
+import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -41,7 +42,7 @@ public class Main {
         System.out.println("Log file will be available at " + Main.class.getClassLoader().getResource("logging.properties"));
 
         // Set up the main architecture of the distributed cache system
-        DistributedCacheTree architecture = setupStructure(system);
+        Architecture architecture = setupStructure(system);
 
         LOGGER.info(architecture.toString());
 
@@ -51,17 +52,28 @@ public class Main {
             System.err.println(e);
         }
 
-        architecture.database.children.get(0).children.get(0).children.get(0).actor.tell(new ReadMessage(21, new ArrayList<>()), ActorRef.noSender());
-
-        // inputContinue();
+        // Read request for key 21
+        architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>()), ActorRef.noSender());
 
         try {
-            Thread.sleep(5000);
+            Thread.sleep(1000);
         } catch (Exception e) {
             System.err.println(e);
         }
 
-        architecture.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
+        // Write request for key 21: new value is 1
+        architecture.clients.get(0).tell(new WriteMessage(21, 1), ActorRef.noSender());
+
+        // inputContinue();
+
+        try {
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            System.err.println(e);
+        }
+
+        // Start distributed snapshot -> the cached values for key 21 should now contain 1
+        architecture.cacheTree.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
 
         // Shutdown system
         system.terminate();
@@ -77,7 +89,7 @@ public class Main {
      * @param system The actor system in use
      * @return A tree representing the complete architecture of the system
      */
-    private static DistributedCacheTree setupStructure(ActorSystem system) {
+    private static Architecture setupStructure(ActorSystem system) {
         System.out.println("Creating tree structure...");
         LOGGER.info("Creating the tree structure...");
         LOGGER.info("Starting with "  + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
@@ -90,36 +102,27 @@ public class Main {
         Map<Integer, Integer> db = initializeDatabase();
         ActorRef database = system.actorOf(Database.props(id++, db), "database");
 
-        DistributedCacheTree architecture = new DistributedCacheTree(database);
+        // Initialize a new Cache Tree
+        DistributedCacheTree cacheTree = new DistributedCacheTree(database);
+
+        // Initialize the arrays that will contain all the L1 and L2 caches
+        List<ActorRef> l1Caches = new ArrayList<>();
+        List<ActorRef> l2Caches = new ArrayList<>();
 
         // Create N_L1 cache servers
-        List<ActorRef> l1Caches = new ArrayList<>();
         for (int i = 0; i < Config.N_L1; i++) {
             l1Caches.add(system.actorOf(Cache.props(id++, database), "l1-cache-" + i));
         }
-        architecture.database.putAll(l1Caches);
+        cacheTree.database.putAll(l1Caches);
 
         // Create N_L2 cache servers
         for (int i = 0; i < l1Caches.size(); i++) {
-            List<ActorRef> l2Caches = new ArrayList<>();
             for (int j = 0; j < Config.N_L2; j++) {
                 // Create the L2 cache server
                 ActorRef newL2 = system.actorOf(Cache.props(id++, l1Caches.get(i)), "l2-cache-" + i + "-" + j);
                 l2Caches.add(newL2);
 
-                architecture.database.children.get(i).put(newL2);
-
-                // Create N_CLIENTS that will communicate with it
-                List<ActorRef> clients = new ArrayList<>();
-                for (int k = 0; k < Config.N_CLIENTS; k++) {
-                    clients.add(system.actorOf(Client.props(id++), "client-" + i + "-" + j + "-" + k));
-
-                    // Send the L2 cache server to the generated client
-                    JoinCachesMessage cachesMsg = new JoinCachesMessage(new ArrayList<>(Collections.singletonList(l2Caches.get(j))));
-                    clients.get(k).tell(cachesMsg, ActorRef.noSender());
-                }
-
-                architecture.database.children.get(i).children.get(j).putAll(clients);
+                cacheTree.database.children.get(i).put(newL2);
             }
 
             // Send to the i-th l1 cache server its children
@@ -131,10 +134,19 @@ public class Main {
         JoinCachesMessage l1CachesMsg = new JoinCachesMessage(l1Caches);
         database.tell(l1CachesMsg, ActorRef.noSender());
 
-        System.out.println("Created the tree structure");
+        // Create N_CLIENTS clients
+        List<ActorRef> clients = new ArrayList<>();
+        for (int k = 0; k < Config.N_CLIENTS; k++) {
+            clients.add(system.actorOf(Client.props(id++), "client-" + k));
+
+            // Send the L2 cache servers to the generated client
+            JoinCachesMessage cachesMsg = new JoinCachesMessage(l2Caches);
+            clients.get(k).tell(cachesMsg, ActorRef.noSender());
+        }
+
         LOGGER.info("Tree structure created");
 
-        return architecture;
+        return new Architecture(cacheTree, clients);
     }
 
     /**

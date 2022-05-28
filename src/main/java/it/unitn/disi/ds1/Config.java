@@ -22,9 +22,9 @@ public class Config {
     public final static int N_L2 = 4;
 
     /**
-     * Number of clients assigned to an L2 cache
+     * Total number of clients
      */
-    public final static int N_CLIENTS = 2;
+    public final static int N_CLIENTS = 5;
 
     /**
      * Random number generator
