@@ -37,6 +37,16 @@ public class Config {
     public final static int NETWORK_DELAY_MS = 10;
 
     /**
+     * Timeout after which the client will make a request to a new cache
+     */
+    public final static int CLIENT_TIMEOUT = 1000;
+
+    /**
+     * Timeout after which the L2 cache will become a new L1 cache
+     */
+    public final static int L2_TIMEOUT = 500;
+
+    /**
      * Crash type
      */
     public enum CrashType {

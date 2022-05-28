@@ -2,6 +2,7 @@ package it.unitn.disi.ds1.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.messages.*;
 
 import java.util.*;
@@ -29,7 +30,12 @@ public class Cache extends Actor {
     /**
      * Reference to the parent actor
      */
-    private final ActorRef parent;
+    private ActorRef parent;
+
+    /**
+     * Database reference
+     */
+    private final ActorRef database;
 
     /**
      * Reference of all children cache servers
@@ -43,28 +49,47 @@ public class Cache extends Actor {
     private final Map<Integer, Integer> cachedDatabase;
 
     /**
+     * cache is waiting for a message
+     */
+    private boolean shouldReceiveResponse = false;
+
+    /**
+     * By default the cache is an L2
+     */
+    private boolean isL1;
+
+    /**
+     * Pending requests
+     */
+    private HashMap<UUID, ReadMessage> pendingQueries;
+
+    /**
      * Cache constructor, by default the cache is an L2
      * Initialize all variables
      *
      * @param id     Cache identifier
      * @param parent Reference to the parent actor
      */
-    public Cache(int id, ActorRef parent) {
+    public Cache(int id, ActorRef parent, ActorRef database) {
         super(id, Cache.class.getName());
         this.parent = parent;
         this.caches = new ArrayList<>();
         this.cachedDatabase = new HashMap<>();
+        this.isL1 = false;
+        this.pendingQueries = new HashMap<>();
+        this.database = database;
     }
 
     /**
      * Static class builder
      *
      * @param id       identifier
+     * @param parent reference to the parent node
      * @param database reference to the database
      * @return Cache instance
      */
-    static public Props props(int id, ActorRef database) {
-        return Props.create(Cache.class, () -> new Cache(id, database));
+    static public Props props(int id, ActorRef parent, ActorRef database) {
+        return Props.create(Cache.class, () -> new Cache(id, parent, database));
     }
 
     /**
@@ -83,6 +108,7 @@ public class Cache extends Actor {
     @Override
     protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
+        this.isL1 = !this.caches.isEmpty();
         this.LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " children peers with ID " + this.id);
     }
 
@@ -111,20 +137,41 @@ public class Cache extends Actor {
             List<ActorRef> newHops = new ArrayList<>(msg.hops);
             newHops.remove(newHops.size() - 1); // remove last element of the hop
             // Generate a new response message which contains the cached data and the new hops
-            ResponseMessage responseMessage = new ResponseMessage(Collections.singletonMap(msg.requestKey, this.cachedDatabase.get(msg.requestKey)), newHops);
+            ResponseMessage responseMessage = new ResponseMessage(Collections.singletonMap(msg.requestKey, this.cachedDatabase.get(msg.requestKey)), newHops, msg.queryUUID);
             // Send the message to the sender of the read message
             getSender().tell(responseMessage, getSelf());
         } else {
+
+            // TODO: remove
+            if (this.isL1) {
+                getContext().become(crashed());
+                return;
+            }
+
             // Cache miss
             this.LOGGER.info(getSelf().path().name() + ": cache miss of key:" + msg.requestKey + " with id: " + this.id + ", asking to the parent: " + this.parent.path().name());
 
+            // Generate a new request UUID
+            UUID uuid;
+            if (msg.queryUUID == null) {
+                uuid = UUID.randomUUID();
+            } else {
+                uuid = msg.queryUUID;
+            }
             // Pass request to the parent, adding getSelf() into the hops
             List<ActorRef> newHops = new ArrayList<>(msg.hops);
             // Add itself to the list of hops
             newHops.add(getSelf());
             // Generate a new read message and sed it to the parent
-            ReadMessage newReadMessage = new ReadMessage(msg.requestKey, newHops);
+            ReadMessage newReadMessage = new ReadMessage(msg.requestKey, newHops, uuid);
             this.parent.tell(newReadMessage, getSelf());
+
+            // This message is pending
+            this.pendingQueries.put(uuid, newReadMessage);
+            if (!this.isL1) {
+                // Setting a scheduler for a possible timeout
+                this.scheduleTimer(new TimeoutMessage(newReadMessage, this.parent), Config.L2_TIMEOUT);
+            }
         }
     }
 
@@ -138,6 +185,12 @@ public class Cache extends Actor {
      * @param msg response message
      */
     protected void onResponseMessage(ResponseMessage msg) {
+        this.pendingQueries.remove(msg.queryUUID);
+        if(!this.isL1){
+            // If there was a timer I cancel it
+            this.cancelTimer();
+        }
+
         // Store the result in the cached database
         this.cachedDatabase.putAll(msg.values);
 
@@ -148,7 +201,7 @@ public class Cache extends Actor {
         // Remove the next hop from the new hops (basically it is the actor to which we are sending the response)
         newHops.remove(newHops.size() - 1);
         // Create the response message with the new hops
-        ResponseMessage newResponseMessage = new ResponseMessage(msg.values, newHops);
+        ResponseMessage newResponseMessage = new ResponseMessage(msg.values, newHops, msg.queryUUID);
         // Send the newly created response to the next hop we previously saved
         sendTo.tell(newResponseMessage, getSelf());
         this.LOGGER.info(getSelf().path().name() + " is answering " + msg.values + " to " + sendTo.path().name());
@@ -174,6 +227,27 @@ public class Cache extends Actor {
 
     @Override
     protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
+
+    }
+
+    @Override
+    protected void onTimeoutMessage(TimeoutMessage msg){
+        // TODO: take care that when L1 respawn this cache need to return L2
+        // or simply become unavailable
+        UUID queryUUID = ((ReadMessage)(msg.msg)).queryUUID;
+        if (!this.pendingQueries.containsKey(queryUUID))
+            return;
+
+        this.parent = this.database;
+        this.isL1 = true;
+        this.pendingQueries.remove(queryUUID);
+        // The cache has become an L1 without assigned L2 caches
+        // It won't be able to answer queries if we don't recreate the tree structure
+        // However for the scope of the project we are not asked to recreate it,
+        // so the cache can just become unavailable
+        getContext().become(unavailable());
+
+        this.LOGGER.info("Cache timed-out: " + msg.whoCrashed.path().name() + " has probably crashed");
 
     }
 
@@ -237,6 +311,7 @@ public class Cache extends Actor {
                 .match(FlushMessage.class, this::onFlushMessage)
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .match(UpdateCacheMessage.class, this::onUpdatedCacheMessage)
+                .match(TimeoutMessage.class, this::onTimeoutMessage)
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
                         this.cachedDatabase,

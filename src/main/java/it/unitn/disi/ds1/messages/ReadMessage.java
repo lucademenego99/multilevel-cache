@@ -4,6 +4,7 @@ import akka.actor.ActorRef;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * READ message
@@ -23,13 +24,19 @@ public class ReadMessage implements Serializable {
     public final int requestKey;
     public final List<ActorRef> hops;
 
+    public final UUID queryUUID;
+
     /**
     * Constructor of the message
      * @param requestKey key of the requested item
      * @param hops
      */
-    public ReadMessage(int requestKey, List<ActorRef> hops) {
+    public ReadMessage(int requestKey, List<ActorRef> hops, UUID uuid) {
         this.requestKey = requestKey;
         this.hops = hops;
+        if (uuid != null)
+            this.queryUUID = new UUID(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
+        else
+            this.queryUUID = null;
     }
 }

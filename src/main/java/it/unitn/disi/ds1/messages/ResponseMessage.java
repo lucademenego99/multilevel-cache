@@ -3,11 +3,7 @@ package it.unitn.disi.ds1.messages;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 
 public class ResponseMessage implements Serializable {
     /**
@@ -25,12 +21,18 @@ public class ResponseMessage implements Serializable {
     public final List<ActorRef> hops;
 
     /**
+     * Query UUID
+     */
+    public final UUID queryUUID;
+
+    /**
      * Constructor of the response message
      * @param values values in the reply
      * @param hops hops which needs to be traversed to deliver the message
      */
-    public ResponseMessage(Map<Integer, Integer> values, List<ActorRef> hops) {
+    public ResponseMessage(Map<Integer, Integer> values, List<ActorRef> hops, UUID uuid) {
         this.values = Collections.unmodifiableMap(new HashMap<>(values));
         this.hops = Collections.unmodifiableList(new ArrayList<>(hops));
+        this.queryUUID = new UUID(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
     }
 }

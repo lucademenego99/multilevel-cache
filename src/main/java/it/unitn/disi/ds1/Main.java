@@ -53,7 +53,7 @@ public class Main {
         }
 
         // Read request for key 21
-        architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>()), ActorRef.noSender());
+        architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null), ActorRef.noSender());
 
         try {
             Thread.sleep(1000);
@@ -62,7 +62,7 @@ public class Main {
         }
 
         // Write request for key 21: new value is 1
-        architecture.clients.get(0).tell(new WriteMessage(21, 1), ActorRef.noSender());
+        // architecture.clients.get(0).tell(new WriteMessage(21, 1), ActorRef.noSender());
 
         // inputContinue();
 
@@ -73,7 +73,7 @@ public class Main {
         }
 
         // Start distributed snapshot -> the cached values for key 21 should now contain 1
-        architecture.cacheTree.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
+        // architecture.cacheTree.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
 
         // Shutdown system
         system.terminate();
@@ -111,7 +111,7 @@ public class Main {
 
         // Create N_L1 cache servers
         for (int i = 0; i < Config.N_L1; i++) {
-            l1Caches.add(system.actorOf(Cache.props(id++, database), "l1-cache-" + i));
+            l1Caches.add(system.actorOf(Cache.props(id++, database, database), "l1-cache-" + i));
         }
         cacheTree.database.putAll(l1Caches);
 
@@ -119,7 +119,7 @@ public class Main {
         for (int i = 0; i < l1Caches.size(); i++) {
             for (int j = 0; j < Config.N_L2; j++) {
                 // Create the L2 cache server
-                ActorRef newL2 = system.actorOf(Cache.props(id++, l1Caches.get(i)), "l2-cache-" + i + "-" + j);
+                ActorRef newL2 = system.actorOf(Cache.props(id++, l1Caches.get(i), database), "l2-cache-" + i + "-" + j);
                 l2Caches.add(newL2);
 
                 cacheTree.database.children.get(i).put(newL2);

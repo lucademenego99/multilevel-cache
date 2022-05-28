@@ -2,6 +2,7 @@ package it.unitn.disi.ds1.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.messages.*;
 
 import java.util.ArrayList;
@@ -25,12 +26,18 @@ public class Client extends Actor {
     private final List<ActorRef> caches;
 
     /**
+     * Remember whether you are waiting for a response from the cache or not
+     */
+    private boolean shouldReceiveResponse;
+
+    /**
      * Client constructor
      * Initialize the target cache servers with an empty array
      */
     public Client(int id) {
         super(id, Client.class.getName());
         this.caches = new ArrayList<>();
+        this.shouldReceiveResponse = false;
     }
 
     /**
@@ -59,14 +66,25 @@ public class Client extends Actor {
      */
     @Override
     protected void onReadMessage(ReadMessage msg) {
-        ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()));
+        if (this.shouldReceiveResponse)
+            return;
+
+        this.shouldReceiveResponse = true;
+        ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()), null);
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
         LOGGER.info("Client is sending read request for key " + msg.requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
+
+        // Schedule the timer
+        this.scheduleTimer(new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT);
     }
 
     @Override
     protected void onWriteMessage(WriteMessage msg) {
+        // Only one request at a time
+        if (this.shouldReceiveResponse)
+            return;
+
         WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue);
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
         LOGGER.info("Client is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
@@ -83,6 +101,23 @@ public class Client extends Actor {
 
     }
 
+    @Override
+    protected void onTimeoutMessage(TimeoutMessage msg){
+        if (!this.shouldReceiveResponse)
+            return;
+
+        // Remove the crashed cache from the available caches (the cache becomes unavailable)
+        this.caches.remove(msg.whoCrashed);
+
+        // Ask to another cache the same thing asked before
+        int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
+        LOGGER.info("Client is sending a read request to another cache for key " + ((ReadMessage)(msg.msg)).requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+        this.caches.get(cacheToAskTo).tell(msg.msg, getSelf());
+
+        // Schedule the timer
+        this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT);
+    }
+
     /**
      * Handler of the Recovery message
      * @param msg recovery message
@@ -97,8 +132,12 @@ public class Client extends Actor {
      * @param msg message containing the final response
      */
     protected void onResponseMessage(ResponseMessage msg){
+        this.shouldReceiveResponse = false;
         this.LOGGER.info(getSelf().path().name() + " got: " + msg.values + " from " + getSender().path().name());
         System.out.println("Requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0]);
+
+        // Cancel eventual timeout timer
+        this.cancelTimer();
     }
 
     @Override
@@ -108,6 +147,7 @@ public class Client extends Actor {
                 .match(ReadMessage.class, this::onReadMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
                 .match(ResponseMessage.class, this::onResponseMessage)
+                .match(TimeoutMessage.class, this::onTimeoutMessage)
                 .build();
     }
 }

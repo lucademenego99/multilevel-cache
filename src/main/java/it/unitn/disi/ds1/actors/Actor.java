@@ -2,9 +2,13 @@ package it.unitn.disi.ds1.actors;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.Cancellable;
 import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.messages.*;
 
+import java.util.concurrent.TimeUnit;
+import scala.concurrent.duration.Duration;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.logging.Logger;
@@ -57,6 +61,11 @@ public abstract class Actor extends AbstractActor {
     protected int snapshotId = 0;
 
     /**
+     * Timer
+     */
+    protected Cancellable timeoutScheduler;
+
+    /**
      * Constructor of the Actor base class
      * @param id identifier of the peer
      * @param loggerName name of the logger
@@ -64,6 +73,7 @@ public abstract class Actor extends AbstractActor {
     public Actor(int id, String loggerName){
         this.id = id;
         this.LOGGER = Logger.getLogger(loggerName);
+        this.timeoutScheduler = null;
     }
 
     /**
@@ -156,7 +166,35 @@ public abstract class Actor extends AbstractActor {
 
     abstract protected void onCriticalWriteMessage(CriticalWriteMessage msg);
 
+    abstract protected void onTimeoutMessage(TimeoutMessage msg);
+
     abstract protected void onJoinCachesMessage(JoinCachesMessage msg);
+
+    /**
+     * Schedule a message after a fixed timer
+     * @param msg message to schedule
+     * @param timeoutMillis time to wait in milliseconds
+     */
+    protected void scheduleTimer(Serializable msg, int timeoutMillis){
+        this.LOGGER.info(getSelf().path().name() + " is scheduling a timeout of " + timeoutMillis);
+        this.timeoutScheduler = getContext().system().scheduler().scheduleOnce(
+                Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),        // how frequently generate them
+                getSelf(),                                                    // destination actor reference
+                msg,                                                          // Timeout message
+                getContext().system().dispatcher(),                           // system dispatcher
+                getSelf()                                                     // source of the message (myself)
+        );
+    }
+
+    /**
+     * Cancel the timeout timer
+     */
+    protected void cancelTimer(){
+        this.LOGGER.info(getSelf().path().name() + " is cancelling a timeout");
+        if(this.timeoutScheduler != null){
+            this.timeoutScheduler.cancel();
+        }
+    }
 
     /**
      * OnStartShapshot
@@ -192,6 +230,17 @@ public abstract class Actor extends AbstractActor {
      * @return builder
      */
     public Receive crashed() {
+        return receiveBuilder()
+                .match(RecoveryMessage.class, this::onRecoveryMessage)
+                .matchAny(msg -> {})
+                .build();
+    }
+
+    /**
+     * Unavailable behavior
+     * @return builder
+     */
+    public Receive unavailable() {
         return receiveBuilder()
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .matchAny(msg -> {})

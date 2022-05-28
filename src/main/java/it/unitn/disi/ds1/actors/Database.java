@@ -4,10 +4,7 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.messages.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Database actor
@@ -87,7 +84,11 @@ public class Database extends Actor {
         newHops.remove(newHops.size() - 1);
 
         // Generate a response message containing the response and the new hops array
-        ResponseMessage responseMessage = new ResponseMessage(Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey)), newHops);
+        ResponseMessage responseMessage = new ResponseMessage(
+                Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey)),
+                newHops,
+                msg.queryUUID       // Encapsulating the query UUID
+        );
 
         // Send the response back to the sender
         getSender().tell(responseMessage, getSelf());
@@ -114,6 +115,9 @@ public class Database extends Actor {
     protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
 
     }
+
+    @Override
+    protected void onTimeoutMessage(TimeoutMessage msg){};
 
     /**
      * Handler of the Recovery message
