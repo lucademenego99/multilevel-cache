@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.Config;
+import it.unitn.disi.ds1.Logger;
 import it.unitn.disi.ds1.messages.*;
 
 import java.util.*;
@@ -71,7 +72,7 @@ public class Cache extends Actor {
      * @param parent Reference to the parent actor
      */
     public Cache(int id, ActorRef parent, ActorRef database) {
-        super(id, Cache.class.getName());
+        super(id);
         this.parent = parent;
         this.caches = new ArrayList<>();
         this.cachedDatabase = new HashMap<>();
@@ -109,7 +110,7 @@ public class Cache extends Actor {
     protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
         this.isL1 = !this.caches.isEmpty();
-        this.LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " children peers with ID " + this.id);
+        Logger.INSTANCE.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " children peers with ID " + this.id);
     }
 
     /**
@@ -131,7 +132,7 @@ public class Cache extends Actor {
     protected void onReadMessage(ReadMessage msg) {
         // Case of a cache hit
         if (this.cachedDatabase.containsKey(msg.requestKey)) {
-            this.LOGGER.info(getSelf().path().name() + ": cache hit of key:" + msg.requestKey + " with ID " + this.id);
+            Logger.INSTANCE.info(getSelf().path().name() + ": cache hit of key:" + msg.requestKey + " with ID " + this.id);
 
             // Get the list of hops, indicated by the read message
             List<ActorRef> newHops = new ArrayList<>(msg.hops);
@@ -142,14 +143,14 @@ public class Cache extends Actor {
             getSender().tell(responseMessage, getSelf());
         } else {
 
-            // TODO: remove
-            if (this.isL1) {
-                getContext().become(crashed());
-                return;
-            }
+            // TODO: L1 CRASH
+            // if (this.isL1) {
+            //     getContext().become(crashed());
+            //     return;
+            // }
 
             // Cache miss
-            this.LOGGER.info(getSelf().path().name() + ": cache miss of key:" + msg.requestKey + " with id: " + this.id + ", asking to the parent: " + this.parent.path().name());
+            Logger.INSTANCE.info(getSelf().path().name() + ": cache miss of key:" + msg.requestKey + " with id: " + this.id + ", asking to the parent: " + this.parent.path().name());
 
             // Generate a new request UUID
             UUID uuid;
@@ -204,7 +205,7 @@ public class Cache extends Actor {
         ResponseMessage newResponseMessage = new ResponseMessage(msg.values, newHops, msg.queryUUID);
         // Send the newly created response to the next hop we previously saved
         sendTo.tell(newResponseMessage, getSelf());
-        this.LOGGER.info(getSelf().path().name() + " is answering " + msg.values + " to " + sendTo.path().name());
+        Logger.INSTANCE.info(getSelf().path().name() + " is answering " + msg.values + " to " + sendTo.path().name());
     }
 
     /**
@@ -216,7 +217,7 @@ public class Cache extends Actor {
      */
     @Override
     protected void onWriteMessage(WriteMessage msg) {
-        LOGGER.info(getSelf().path().name() + ": forwarding the message to the parent with ID " + this.id);
+        Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the message to the parent with ID " + this.id);
         this.parent.tell(msg, getSelf());
     }
 
@@ -247,7 +248,7 @@ public class Cache extends Actor {
         // so the cache can just become unavailable
         getContext().become(unavailable());
 
-        this.LOGGER.info("Cache timed-out: " + msg.whoCrashed.path().name() + " has probably crashed");
+        Logger.INSTANCE.info("Cache timed-out: " + msg.whoCrashed.path().name() + " has probably crashed");
 
     }
 
@@ -256,13 +257,13 @@ public class Cache extends Actor {
         int updatedValue = (int) msg.values.values().toArray()[0];
 
         if (this.cachedDatabase.containsKey(updatedKey)) {
-            this.LOGGER.info(getSelf().path().name() + ": updating the cached value for key " + updatedKey);
+            Logger.INSTANCE.info(getSelf().path().name() + ": updating the cached value for key " + updatedKey);
             this.cachedDatabase.remove(updatedKey);
             this.cachedDatabase.put(updatedKey, updatedValue);
         }
 
         if (!this.caches.isEmpty()) {
-            this.LOGGER.info(getSelf().path().name() + ": forwarding the new value for " + updatedKey + " to lower L2 caches");
+            Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the new value for " + updatedKey + " to lower L2 caches");
             multicast(msg, this.caches);
         }
     }
@@ -281,7 +282,7 @@ public class Cache extends Actor {
         this.clearCache();
         // TODO maybe a better way to handle it since we may know whether one node is L1 or L2?
         this.multicast(new FlushMessage(), this.caches);
-        this.LOGGER.info(getSelf().path().name() + ": recovering: flushing the cache and multicast flush with ID " + this.id);
+        Logger.INSTANCE.info(getSelf().path().name() + ": recovering: flushing the cache and multicast flush with ID " + this.id);
     }
 
     /**
@@ -293,7 +294,7 @@ public class Cache extends Actor {
     private void onFlushMessage(FlushMessage msg) {
         // Empty the local cache
         this.clearCache();
-        this.LOGGER.info(getSelf().path().name() + ": flushing the cache with ID " + this.id);
+        Logger.INSTANCE.info(getSelf().path().name() + ": flushing the cache with ID " + this.id);
     }
 
     /**

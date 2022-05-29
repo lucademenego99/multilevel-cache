@@ -17,8 +17,8 @@ public class Architecture {
     public String toString() {
         return "ARCHITECTURE" +
                 "\n-----------" +
-                "\nCacheTree=\n" + cacheTree +
+                "\nCACHE-TREE\n" + cacheTree +
                 "-----------" +
-                "\nClients=\n" + clients;
+                "\nCLIENTS\n" + clients;
     }
 }

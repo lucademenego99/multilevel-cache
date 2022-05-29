@@ -7,8 +7,6 @@ import it.unitn.disi.ds1.actors.Client;
 import it.unitn.disi.ds1.actors.Database;
 import it.unitn.disi.ds1.messages.JoinCachesMessage;
 import it.unitn.disi.ds1.messages.ReadMessage;
-import it.unitn.disi.ds1.messages.StartSnapshotMessage;
-import it.unitn.disi.ds1.messages.WriteMessage;
 import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 
@@ -17,18 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /***
  * Main class of the project
  */
 public class Main {
-    /**
-     * Logger
-     */
-    private final static Logger LOGGER = Logger.getLogger(Main.class.getName());
-
     /***
      * Main function of the distributed systems project
      * @param args command line arguments
@@ -37,19 +28,21 @@ public class Main {
         // Create the actor system
         final ActorSystem system = ActorSystem.create("distributed-cache");
 
-        // Logger, TODO, maybe a better logger, at least a file where to save this?
-        LOGGER.setLevel(Level.INFO);
-        System.out.println("Log file will be available at " + Main.class.getClassLoader().getResource("logging.properties"));
+        // Initialize the Logger
+        Logger.initLogger();
+
+        // Create a database initialized with random values
+        Map<Integer, Integer> database = initializeDatabase();
+        database.put(21, 99);   // DEBUG
 
         // Set up the main architecture of the distributed cache system
-        Architecture architecture = setupStructure(system);
-
-        LOGGER.info(architecture.toString());
+        Architecture architecture = setupStructure(system, database);
+        Logger.INSTANCE.info(architecture.toString());
 
         try {
             Thread.sleep(500);
         } catch (Exception e) {
-            System.err.println(e);
+            Logger.INSTANCE.severe(e.toString());
         }
 
         // Read request for key 21
@@ -58,7 +51,7 @@ public class Main {
         try {
             Thread.sleep(1000);
         } catch (Exception e) {
-            System.err.println(e);
+            Logger.INSTANCE.severe(e.toString());
         }
 
         // Write request for key 21: new value is 1
@@ -69,7 +62,7 @@ public class Main {
         try {
             Thread.sleep(1000);
         } catch (Exception e) {
-            System.err.println(e);
+            Logger.INSTANCE.severe(e.toString());
         }
 
         // Start distributed snapshot -> the cached values for key 21 should now contain 1
@@ -87,19 +80,19 @@ public class Main {
      * - clients performing requests to L2 caches
      *
      * @param system The actor system in use
+     * @param db The database containing some initial values
      * @return A tree representing the complete architecture of the system
      */
-    private static Architecture setupStructure(ActorSystem system) {
+    private static Architecture setupStructure(ActorSystem system, Map<Integer, Integer> db) {
         System.out.println("Creating tree structure...");
-        LOGGER.info("Creating the tree structure...");
-        LOGGER.info("Starting with "  + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
+        Logger.INSTANCE.info("Creating the tree structure...");
+        Logger.INSTANCE.info("Starting with "  + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
                 Config.N_L2 + " associated caches each");
 
         // ids
         int id = 0;
 
         // Create the database
-        Map<Integer, Integer> db = initializeDatabase();
         ActorRef database = system.actorOf(Database.props(id++, db), "database");
 
         // Initialize a new Cache Tree
@@ -144,7 +137,7 @@ public class Main {
             clients.get(k).tell(cachesMsg, ActorRef.noSender());
         }
 
-        LOGGER.info("Tree structure created");
+        Logger.INSTANCE.info("Tree structure created");
 
         return new Architecture(cacheTree, clients);
     }
@@ -158,7 +151,6 @@ public class Main {
         for (int i = 0; i < 100; i++) {
             db.put(i, (int)(Math.random() * (100)));
         }
-        db.put(21, 99);
         return db;
     }
 

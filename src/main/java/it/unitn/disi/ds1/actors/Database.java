@@ -2,6 +2,7 @@ package it.unitn.disi.ds1.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import it.unitn.disi.ds1.Logger;
 import it.unitn.disi.ds1.messages.*;
 
 import java.util.*;
@@ -39,7 +40,7 @@ public class Database extends Actor {
      * @param database A Map containing the entries of our database
      */
     public Database(int id, Map<Integer, Integer> database) {
-        super(id, Database.class.getName());
+        super(id);
         this.database = database;
         this.caches = new ArrayList<>();
     }
@@ -67,7 +68,7 @@ public class Database extends Actor {
     @Override
     protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
-        LOGGER.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
+        Logger.INSTANCE.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
     }
 
     /**
@@ -93,7 +94,7 @@ public class Database extends Actor {
         // Send the response back to the sender
         getSender().tell(responseMessage, getSelf());
 
-        this.LOGGER.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name());
+        Logger.INSTANCE.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name());
     }
 
     @Override
@@ -101,7 +102,7 @@ public class Database extends Actor {
         this.database.remove(msg.requestKey);
         this.database.put(msg.requestKey, msg.modifiedValue);
 
-        this.LOGGER.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name());
+        Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name());
 
         multicast(new UpdateCacheMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue)), this.caches);
     }

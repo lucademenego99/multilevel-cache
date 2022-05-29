@@ -14,3 +14,4 @@ build/
 .idea
 .settings
 .classpath
+logs.txt

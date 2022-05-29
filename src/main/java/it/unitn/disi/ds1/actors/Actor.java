@@ -5,13 +5,13 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.Cancellable;
 import it.unitn.disi.ds1.Config;
+import it.unitn.disi.ds1.Logger;
 import it.unitn.disi.ds1.messages.*;
 
 import java.util.concurrent.TimeUnit;
 import scala.concurrent.duration.Duration;
 import java.io.Serializable;
 import java.util.Collections;
-import java.util.logging.Logger;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -23,11 +23,6 @@ import java.util.Set;
  * Provides the actor base functionality
  */
 public abstract class Actor extends AbstractActor {
-    /**
-     * Logger
-     */
-    protected final Logger LOGGER;
-
     /**
      * Peer id
      */
@@ -68,11 +63,9 @@ public abstract class Actor extends AbstractActor {
     /**
      * Constructor of the Actor base class
      * @param id identifier of the peer
-     * @param loggerName name of the logger
      */
-    public Actor(int id, String loggerName){
+    public Actor(int id){
         this.id = id;
-        this.LOGGER = Logger.getLogger(loggerName);
         this.timeoutScheduler = null;
     }
 
@@ -100,7 +93,7 @@ public abstract class Actor extends AbstractActor {
      * @param peers List of peers
      */
     private void sendTokens(List<ActorRef> peers) {
-        this.LOGGER.info(getSelf().path().name() + " with id " + this.id +" sending tokens");
+        Logger.INSTANCE.info(getSelf().path().name() + " with id " + this.id +" sending tokens");
         TokenMessage t = new TokenMessage(this.snapshotId);
         this.multicast(t, peers);
     }
@@ -110,7 +103,7 @@ public abstract class Actor extends AbstractActor {
      * @param peers
      */
     private boolean snapshotEnded(List<ActorRef> peers){
-        this.LOGGER.info(getSelf().path().name() + " with id " + this.id +" has ended the snapshot");
+        Logger.INSTANCE.info(getSelf().path().name() + " with id " + this.id +" has ended the snapshot");
         return this.tokensReceived.containsAll(peers);
     }
 
@@ -126,7 +119,7 @@ public abstract class Actor extends AbstractActor {
         // Add itself to the tokens received
         this.tokensReceived.add(getSelf());
         // Log the info
-        this.LOGGER.info(getSelf().path().name() + " with id " + this.id + " snapId: "+ this.snapshotId + " current data: " + this.currentCache + " data in transit " + this.dataInTransit);
+        Logger.INSTANCE.info(getSelf().path().name() + " with id " + this.id + " snapId: "+ this.snapshotId + " current data: " + this.currentCache + " data in transit " + this.dataInTransit);
     }
 
     /**
@@ -153,7 +146,7 @@ public abstract class Actor extends AbstractActor {
 
         if(this.snapshotEnded(peers)){
             // Terminates the snapshot
-            this.LOGGER.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: "+ this.snapshotId + " state: " + this.currentCache + this.dataInTransit);
+            Logger.INSTANCE.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: "+ this.snapshotId + " state: " + this.currentCache + this.dataInTransit);
             this.terminateSnapshot();
         }
     }
@@ -176,7 +169,7 @@ public abstract class Actor extends AbstractActor {
      * @param timeoutMillis time to wait in milliseconds
      */
     protected void scheduleTimer(Serializable msg, int timeoutMillis){
-        this.LOGGER.info(getSelf().path().name() + " is scheduling a timeout of " + timeoutMillis);
+        Logger.INSTANCE.info(getSelf().path().name() + " is scheduling a timeout of " + timeoutMillis);
         this.timeoutScheduler = getContext().system().scheduler().scheduleOnce(
                 Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),        // how frequently generate them
                 getSelf(),                                                    // destination actor reference
@@ -190,7 +183,7 @@ public abstract class Actor extends AbstractActor {
      * Cancel the timeout timer
      */
     protected void cancelTimer(){
-        this.LOGGER.info(getSelf().path().name() + " is cancelling a timeout");
+        Logger.INSTANCE.info(getSelf().path().name() + " is cancelling a timeout");
         if(this.timeoutScheduler != null){
             this.timeoutScheduler.cancel();
         }
@@ -204,7 +197,7 @@ public abstract class Actor extends AbstractActor {
     protected void onStartSnapshot(StartSnapshotMessage msg, Map data, List<ActorRef> peers) {
         // we've been asked to initiate a snapshot
         this.snapshotId += 1;
-        this.LOGGER.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: " + this.snapshotId + " starting a snapshot");
+        Logger.INSTANCE.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: " + this.snapshotId + " starting a snapshot");
         this.captureState(data);
         this.sendTokens(peers);
     }
