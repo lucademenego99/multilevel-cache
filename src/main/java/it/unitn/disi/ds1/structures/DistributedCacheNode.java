@@ -14,12 +14,12 @@ public class DistributedCacheNode {
     public DistributedCacheNode(ActorRef actor, DistributedCacheNode parent) {
         this.actor = actor;
         this.parent = parent;
-        children = new ArrayList<>();
+        this.children = new ArrayList<>();
     }
 
     public void put(ActorRef newActor) {
         DistributedCacheNode newNode = new DistributedCacheNode(newActor, this);
-        children.add(newNode);
+        this.children.add(newNode);
     }
 
     public void putAll(List<ActorRef> newActors) {

@@ -2,7 +2,6 @@ package it.unitn.disi.ds1.actors;
 
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.Cancellable;
 import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.Logger;
@@ -10,7 +9,6 @@ import it.unitn.disi.ds1.messages.*;
 
 import java.util.concurrent.TimeUnit;
 import scala.concurrent.duration.Duration;
-import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +74,7 @@ public abstract class Actor extends AbstractActor {
      * @param multicastGroup group to whom send the message
      * @return
      */
-    protected void multicast(Serializable msg, List<ActorRef> multicastGroup) {
+    protected void multicast(Message msg, List<ActorRef> multicastGroup) {
         for (ActorRef p: multicastGroup) {
             if (!p.equals(getSelf())) {
                 p.tell(msg, getSelf());
@@ -93,7 +91,7 @@ public abstract class Actor extends AbstractActor {
      * @param peers List of peers
      */
     private void sendTokens(List<ActorRef> peers) {
-        Logger.INSTANCE.info(getSelf().path().name() + " with id " + this.id +" sending tokens");
+        Logger.INSTANCE.finer(getSelf().path().name() + " with id " + this.id +" sending tokens");
         TokenMessage t = new TokenMessage(this.snapshotId);
         this.multicast(t, peers);
     }
@@ -103,7 +101,6 @@ public abstract class Actor extends AbstractActor {
      * @param peers
      */
     private boolean snapshotEnded(List<ActorRef> peers){
-        Logger.INSTANCE.info(getSelf().path().name() + " with id " + this.id +" has ended the snapshot");
         return this.tokensReceived.containsAll(peers);
     }
 
@@ -111,15 +108,13 @@ public abstract class Actor extends AbstractActor {
      * Capture the current data within the system
      * @param data either the cache or the database
      */
-    private void captureState(Map data) {
+    private void captureState(Map<Integer, Integer> data) {
         // State set to captured
         this.stateCaptured = true;
         // This means that the snapshot is not stored yet.
         this.currentCache = Collections.unmodifiableMap(data);
         // Add itself to the tokens received
         this.tokensReceived.add(getSelf());
-        // Log the info
-        Logger.INSTANCE.info(getSelf().path().name() + " with id " + this.id + " snapId: "+ this.snapshotId + " current data: " + this.currentCache + " data in transit " + this.dataInTransit);
     }
 
     /**
@@ -127,7 +122,7 @@ public abstract class Actor extends AbstractActor {
      * Define what the actor does when the token message is received
      * @param token
      */
-    protected void onToken(TokenMessage token, Map data, List<ActorRef> peers) {
+    protected void onToken(TokenMessage token, Map<Integer, Integer> data, List<ActorRef> peers) {
         // When the token as been received
         this.snapshotId = token.snapId;
 
@@ -146,8 +141,20 @@ public abstract class Actor extends AbstractActor {
 
         if(this.snapshotEnded(peers)){
             // Terminates the snapshot
-            Logger.INSTANCE.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: "+ this.snapshotId + " state: " + this.currentCache + this.dataInTransit);
+            Logger.INSTANCE.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: "+ this.snapshotId + " state: " + this.currentCache + " messages in transit: " + this.dataInTransit);
             this.terminateSnapshot();
+        }
+    }
+
+    /**
+     * Method used in order to capture the data in transit
+     * @param transit data in transit
+     * @param sender sender
+     */
+    protected void capureTransitMessages(Map<Integer, Integer> transit, ActorRef sender){
+        if(this.stateCaptured && !this.tokensReceived.contains(sender)){
+            // It means that I am in the snapshot, and I am recording not that channel
+            this.dataInTransit.putAll(transit);
         }
     }
 
@@ -163,12 +170,14 @@ public abstract class Actor extends AbstractActor {
 
     abstract protected void onJoinCachesMessage(JoinCachesMessage msg);
 
+    abstract protected void onResponseMessage(ResponseMessage msg);
+
     /**
      * Schedule a message after a fixed timer
      * @param msg message to schedule
      * @param timeoutMillis time to wait in milliseconds
      */
-    protected void scheduleTimer(Serializable msg, int timeoutMillis){
+    protected void scheduleTimer(Message msg, int timeoutMillis){
         Logger.INSTANCE.info(getSelf().path().name() + " is scheduling a timeout of " + timeoutMillis);
         this.timeoutScheduler = getContext().system().scheduler().scheduleOnce(
                 Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),        // how frequently generate them
@@ -194,7 +203,7 @@ public abstract class Actor extends AbstractActor {
      * Starts a snapshot
      * @param msg start snapshot message
      */
-    protected void onStartSnapshot(StartSnapshotMessage msg, Map data, List<ActorRef> peers) {
+    protected void onStartSnapshot(StartSnapshotMessage msg, Map<Integer, Integer> data, List<ActorRef> peers) {
         // we've been asked to initiate a snapshot
         this.snapshotId += 1;
         Logger.INSTANCE.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: " + this.snapshotId + " starting a snapshot");
@@ -223,17 +232,6 @@ public abstract class Actor extends AbstractActor {
      * @return builder
      */
     public Receive crashed() {
-        return receiveBuilder()
-                .match(RecoveryMessage.class, this::onRecoveryMessage)
-                .matchAny(msg -> {})
-                .build();
-    }
-
-    /**
-     * Unavailable behavior
-     * @return builder
-     */
-    public Receive unavailable() {
         return receiveBuilder()
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .matchAny(msg -> {})

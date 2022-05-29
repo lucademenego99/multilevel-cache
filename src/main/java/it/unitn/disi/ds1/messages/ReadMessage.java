@@ -3,6 +3,7 @@ package it.unitn.disi.ds1.messages;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,7 +18,7 @@ import java.util.UUID;
  * caches save the item for future requests.
  * Client timeouts should take into account the time for the request to reach the database.
  */
-public class ReadMessage implements Serializable {
+public class ReadMessage extends Message {
     /**
      * Request key
      */
@@ -33,7 +34,7 @@ public class ReadMessage implements Serializable {
      */
     public ReadMessage(int requestKey, List<ActorRef> hops, UUID uuid) {
         this.requestKey = requestKey;
-        this.hops = hops;
+        this.hops = Collections.unmodifiableList(hops);
         if (uuid != null)
             this.queryUUID = new UUID(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
         else

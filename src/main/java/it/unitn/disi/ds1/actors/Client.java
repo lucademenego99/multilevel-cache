@@ -86,7 +86,7 @@ public class Client extends Actor {
         if (this.shouldReceiveResponse)
             return;
 
-        WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue);
+        WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue, Collections.singletonList(getSelf()), null);
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
         Logger.INSTANCE.info("Client is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
@@ -113,8 +113,8 @@ public class Client extends Actor {
         // Ask to another cache the same thing asked before
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
         Logger.INSTANCE.info("Client is sending a read request to another cache for key " + ((ReadMessage)(msg.msg)).requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
-        this.caches.get(cacheToAskTo).tell(msg.msg, getSelf());
 
+        // TODO: Put check if it's ReadMessage or WriteMessage
         // Schedule the timer
         this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT);
     }
@@ -127,18 +127,30 @@ public class Client extends Actor {
     protected void onRecoveryMessage(RecoveryMessage msg){}
 
     /**
-     * TODO: put onResponseMessage on Actor
      * Handler of the ResponseMessage
      * Print on the console the final result
      * @param msg message containing the final response
      */
+    @Override
     protected void onResponseMessage(ResponseMessage msg){
-        this.shouldReceiveResponse = false;
-        Logger.INSTANCE.info(getSelf().path().name() + " got: " + msg.values + " from " + getSender().path().name());
-        System.out.println("Requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0]);
-
         // Cancel eventual timeout timer
         this.cancelTimer();
+
+        this.shouldReceiveResponse = false;
+        Logger.INSTANCE.info(getSelf().path().name() + " got: " + msg.values + " from " + getSender().path().name());
+
+        System.out.println("Values " + msg.values);
+        if(msg.values != null){
+            System.out.println("Operation completed successful requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0]);
+        }else{
+            // If the L1 cache crashed, the L2 cache became L1, so we remove it from the caches the client can communicate with
+            if (msg.requestType == Config.RequestType.READ) {
+                System.out.println("Read operation failed");
+                this.caches.remove(getSender());
+            } else if (msg.requestType == Config.RequestType.WRITE) {
+                System.out.println("Write operation failed");
+            }
+        }
     }
 
     @Override

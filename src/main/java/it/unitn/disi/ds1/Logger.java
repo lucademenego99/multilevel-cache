@@ -12,6 +12,9 @@ public class Logger {
      */
     public final static java.util.logging.Logger INSTANCE = java.util.logging.Logger.getLogger(Main.class.getName());
 
+    /**
+     * Init logger function
+     */
     public static void initLogger() {
         // Set up a basic logger - log severity to consider: info, warning and severe
         INSTANCE.setLevel(Level.INFO);

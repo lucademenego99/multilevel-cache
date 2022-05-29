@@ -7,6 +7,8 @@ import it.unitn.disi.ds1.actors.Client;
 import it.unitn.disi.ds1.actors.Database;
 import it.unitn.disi.ds1.messages.JoinCachesMessage;
 import it.unitn.disi.ds1.messages.ReadMessage;
+import it.unitn.disi.ds1.messages.StartSnapshotMessage;
+import it.unitn.disi.ds1.messages.WriteMessage;
 import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 
@@ -46,7 +48,7 @@ public class Main {
         }
 
         // Read request for key 21
-        architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null), ActorRef.noSender());
+        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null), ActorRef.noSender());
 
         try {
             Thread.sleep(1000);
@@ -55,7 +57,7 @@ public class Main {
         }
 
         // Write request for key 21: new value is 1
-        // architecture.clients.get(0).tell(new WriteMessage(21, 1), ActorRef.noSender());
+        architecture.clients.get(0).tell(new WriteMessage(21, 1, new ArrayList<>(), null), ActorRef.noSender());
 
         // inputContinue();
 
@@ -66,7 +68,7 @@ public class Main {
         }
 
         // Start distributed snapshot -> the cached values for key 21 should now contain 1
-        // architecture.cacheTree.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
+        architecture.cacheTree.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
 
         // Shutdown system
         system.terminate();
@@ -110,17 +112,19 @@ public class Main {
 
         // Create N_L2 cache servers
         for (int i = 0; i < l1Caches.size(); i++) {
+            List<ActorRef> l2CachesTmp = new ArrayList<>();
             for (int j = 0; j < Config.N_L2; j++) {
                 // Create the L2 cache server
                 ActorRef newL2 = system.actorOf(Cache.props(id++, l1Caches.get(i), database), "l2-cache-" + i + "-" + j);
-                l2Caches.add(newL2);
-
+                l2CachesTmp.add(newL2);
                 cacheTree.database.children.get(i).put(newL2);
             }
 
             // Send to the i-th l1 cache server its children
-            JoinCachesMessage l2CachesMsg = new JoinCachesMessage(l2Caches);
+            JoinCachesMessage l2CachesMsg = new JoinCachesMessage(l2CachesTmp);
             l1Caches.get(i).tell(l2CachesMsg, ActorRef.noSender());
+
+            l2Caches.addAll(l2CachesTmp);
         }
 
         // Send to the database the list of L1 cache servers
@@ -161,4 +165,13 @@ public class Main {
         }
         catch (IOException ignored) {}
     }
+
+    /**
+     * Useful TODOs
+     * TODO: develop an automatic way for the processes' crashes
+     * TODO: test the crashes on response and onWrite/onRead for L1 caches
+     * TODO: recoveries both L1 and L2 in the cases described above
+     * TODO: sequence numbers implementation (one per data, they are returned also by read and write operations)
+     * TODO: ...
+     */
 }

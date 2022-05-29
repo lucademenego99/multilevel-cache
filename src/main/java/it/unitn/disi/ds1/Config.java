@@ -14,7 +14,7 @@ public class Config {
     /**
      * Number of L1 caches
      */
-    public final static int N_L1 = 3;
+    public final static int N_L1 = 4;
 
     /**
      * Number of L2 caches associated to an L1 cache
@@ -51,5 +51,15 @@ public class Config {
      */
     public enum CrashType {
         NONE,
+    }
+
+    /**
+     * Discriminate the response message
+     */
+    public enum RequestType {
+        READ,
+        WRITE,
+        CRITREAD,
+        CRITWRITE
     }
 }

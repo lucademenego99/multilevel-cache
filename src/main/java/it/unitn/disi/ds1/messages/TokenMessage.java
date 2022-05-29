@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * TokenMessage class
  */
-public class TokenMessage implements Serializable {
+public class TokenMessage extends Message {
     /**
      * Snapshot identifier
      */

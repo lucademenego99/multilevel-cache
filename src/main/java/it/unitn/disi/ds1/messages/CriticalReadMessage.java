@@ -13,7 +13,7 @@ import java.io.Serializable;
  * caches save the item for future requests.
  * Client timeouts should take into account the time for the request to reach the database.
  */
-public class CriticalReadMessage implements Serializable {
+public class CriticalReadMessage extends Message {
     /**
      * Request key
      */

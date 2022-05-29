@@ -2,4 +2,4 @@ package it.unitn.disi.ds1.messages;
 
 import java.io.Serializable;
 
-public class RecoveryMessage implements Serializable {};
+public class RecoveryMessage extends Message {};

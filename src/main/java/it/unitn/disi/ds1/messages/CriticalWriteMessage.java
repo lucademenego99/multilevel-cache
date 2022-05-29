@@ -10,7 +10,7 @@ import java.io.Serializable;
  * way, the update is potentially applied at all caches, which is necessary for eventual consistency. Note that
  * only those caches that were already storing the written item will update their local values.
  */
-public class CriticalWriteMessage implements Serializable {
+public class CriticalWriteMessage extends Message {
     /**
      * Request key
      */

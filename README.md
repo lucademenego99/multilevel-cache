@@ -17,7 +17,7 @@ You can either use [Gradle](https://gradle.org/) to compile the code or you can 
 
 > For all the tasks, you can run `gradle tasks`
 
-Gradle is used to both keep track of the dependencies of the project and compiling the it.
+Gradle is used to both keep track of the dependencies of the project and compiling it.
 
 #### Build
 

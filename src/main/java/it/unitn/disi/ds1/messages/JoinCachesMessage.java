@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Message to handle cache servers joining the distributed cache architecture
  */
-public class JoinCachesMessage implements Serializable {
+public class JoinCachesMessage extends Message {
     /**
      * List of caches joining the architecture
      */

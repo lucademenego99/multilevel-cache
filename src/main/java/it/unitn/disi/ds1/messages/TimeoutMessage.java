@@ -4,7 +4,7 @@ import akka.actor.ActorRef;
 
 import java.io.Serializable;
 
-public class TimeoutMessage implements Serializable {
+public class TimeoutMessage extends Message {
     public final Serializable msg;
     public final ActorRef whoCrashed;
 

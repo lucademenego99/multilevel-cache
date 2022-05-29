@@ -2,6 +2,7 @@ package it.unitn.disi.ds1.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.Logger;
 import it.unitn.disi.ds1.messages.*;
 
@@ -88,7 +89,8 @@ public class Database extends Actor {
         ResponseMessage responseMessage = new ResponseMessage(
                 Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey)),
                 newHops,
-                msg.queryUUID       // Encapsulating the query UUID
+                msg.queryUUID,                  // Encapsulating the query UUID
+                Config.RequestType.READ
         );
 
         // Send the response back to the sender
@@ -102,9 +104,15 @@ public class Database extends Actor {
         this.database.remove(msg.requestKey);
         this.database.put(msg.requestKey, msg.modifiedValue);
 
+        // Generate a new ArrayList from the message hops
+        List<ActorRef> newHops = new ArrayList<>(msg.hops);
+
+        // Remove the next hop from the new hops array
+        newHops.remove(newHops.size() - 1);
+
         Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name());
 
-        multicast(new UpdateCacheMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue)), this.caches);
+        multicast(new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID, Config.RequestType.WRITE), this.caches);
     }
 
     @Override
@@ -116,6 +124,9 @@ public class Database extends Actor {
     protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
 
     }
+
+    @Override
+    protected void onResponseMessage(ResponseMessage msg){};
 
     @Override
     protected void onTimeoutMessage(TimeoutMessage msg){};
