@@ -42,15 +42,42 @@ public class Config {
     public final static int CLIENT_TIMEOUT = 1000;
 
     /**
+     * Minimum milliseconds to wait to recover a crash
+     */
+    public final static int MIN_RECOVERY_IN = 250;
+
+    /**
+     * Maximum milliseconds to wait to recover a crash
+     */
+    public final static int MAX_RECOVERY_IN = 750;
+
+    /**
      * Timeout after which the L2 cache will become a new L1 cache
      */
     public final static int L2_TIMEOUT = 500;
+
+    /**
+     * Number of iterations
+     */
+    public final static int N_ITERATIONS = 5;
 
     /**
      * Crash type
      */
     public enum CrashType {
         NONE,
+        L1_BEFORE_READ,
+        L1_AFTER_READ,
+        L2_BEFORE_READ,
+        L2_AFTER_READ,
+        L1_BEFORE_WRITE,
+        L1_AFTER_WRITE,
+        L2_BEFORE_WRITE,
+        L2_AFTER_WRITE,
+        L1_BEFORE_RESPONSE,
+        L1_AFTER_RESPONSE,
+        L2_BEFORE_RESPONSE,
+        L2_AFTER_RESPONSE,
     }
 
     /**

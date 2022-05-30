@@ -2,7 +2,6 @@ package it.unitn.disi.ds1.messages;
 
 import akka.actor.ActorRef;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

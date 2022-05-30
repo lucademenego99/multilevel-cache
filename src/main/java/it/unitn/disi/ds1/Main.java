@@ -5,10 +5,7 @@ import akka.actor.ActorSystem;
 import it.unitn.disi.ds1.actors.Cache;
 import it.unitn.disi.ds1.actors.Client;
 import it.unitn.disi.ds1.actors.Database;
-import it.unitn.disi.ds1.messages.JoinCachesMessage;
-import it.unitn.disi.ds1.messages.ReadMessage;
-import it.unitn.disi.ds1.messages.StartSnapshotMessage;
-import it.unitn.disi.ds1.messages.WriteMessage;
+import it.unitn.disi.ds1.messages.*;
 import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 
@@ -47,17 +44,34 @@ public class Main {
             Logger.INSTANCE.severe(e.toString());
         }
 
-        // Read request for key 21
-        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null), ActorRef.noSender());
+        // TODO: automatic way of crashing L1 or L2 (if L1_crash -> indice, altrimenti un altro)
+        CrashMessage crash = new CrashMessage(Config.CrashType.L1_BEFORE_READ);
+        architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
+
+        /**
+         * Random read messages
+         */
+        for(int i = 0; i < Config.N_ITERATIONS; i++) {
+            // Read request for key 21
+            for(int j = 0; j < Config.N_CLIENTS; j++) {
+                int requestKey = (int) database.keySet().toArray()[Config.RANDOM.nextInt(database.keySet().toArray().length)];
+                architecture.clients.get(j).tell(new ReadMessage(requestKey, new ArrayList<>(), null), ActorRef.noSender());
+            }
+            try {
+                Thread.sleep(4000);
+            } catch (Exception e) {
+                Logger.INSTANCE.severe(e.toString());
+            }
+        }
 
         try {
-            Thread.sleep(1000);
+            Thread.sleep(3000);
         } catch (Exception e) {
             Logger.INSTANCE.severe(e.toString());
         }
 
         // Write request for key 21: new value is 1
-        architecture.clients.get(0).tell(new WriteMessage(21, 1, new ArrayList<>(), null), ActorRef.noSender());
+        // architecture.clients.get(0).tell(new WriteMessage(21, 1, new ArrayList<>(), null), ActorRef.noSender());
 
         // inputContinue();
 

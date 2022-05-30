@@ -73,7 +73,7 @@ public class Client extends Actor {
         this.shouldReceiveResponse = true;
         ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()), null);
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
-        Logger.INSTANCE.info("Client is sending read request for key " + msg.requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.INSTANCE.info(getSelf().path().name() + " is sending read request for key " + msg.requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
 
         // Schedule the timer
@@ -86,9 +86,11 @@ public class Client extends Actor {
         if (this.shouldReceiveResponse)
             return;
 
+        this.shouldReceiveResponse = true;
+
         WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue, Collections.singletonList(getSelf()), null);
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
-        Logger.INSTANCE.info("Client is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.INSTANCE.info(getSelf().path().name() + " is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
     }
 
@@ -108,11 +110,32 @@ public class Client extends Actor {
             return;
 
         // Remove the crashed cache from the available caches (the cache becomes unavailable)
-        this.caches.remove(msg.whoCrashed);
+        // this.caches.remove(msg.whoCrashed);
 
         // Ask to another cache the same thing asked before
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
-        Logger.INSTANCE.info("Client is sending a read request to another cache for key " + ((ReadMessage)(msg.msg)).requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+
+
+        // Tell to another cache
+        int requestKey = -1, modifiedValue = -1;
+        Message newMessage = null;
+        String type = "-1";
+        // Recreate the message which should be sent to a new cache
+        if (msg.msg instanceof ReadMessage){
+            requestKey = ((ReadMessage)(msg.msg)).requestKey;
+            newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), null);
+            type = "read";
+        } else if (msg.msg instanceof WriteMessage) {
+            requestKey = ((WriteMessage)(msg.msg)).requestKey;
+            modifiedValue = ((WriteMessage)(msg.msg)).modifiedValue;
+            newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), null);
+            type = "write";
+        }
+
+        Logger.INSTANCE.info(getSelf().path().name() + " is sending a " + type + " request to another cache for key " + requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+
+        this.caches.get(cacheToAskTo).tell(newMessage, getSelf());
+
 
         // TODO: Put check if it's ReadMessage or WriteMessage
         // Schedule the timer
@@ -139,16 +162,16 @@ public class Client extends Actor {
         this.shouldReceiveResponse = false;
         Logger.INSTANCE.info(getSelf().path().name() + " got: " + msg.values + " from " + getSender().path().name());
 
-        System.out.println("Values " + msg.values);
+        Logger.INSTANCE.info("Values " + msg.values);
         if(msg.values != null){
-            System.out.println("Operation completed successful requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0]);
+            Logger.INSTANCE.warning("Operation completed successful requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0]);
         }else{
             // If the L1 cache crashed, the L2 cache became L1, so we remove it from the caches the client can communicate with
             if (msg.requestType == Config.RequestType.READ) {
-                System.out.println("Read operation failed");
+                Logger.INSTANCE.warning("Read operation failed");
                 this.caches.remove(getSender());
             } else if (msg.requestType == Config.RequestType.WRITE) {
-                System.out.println("Write operation failed");
+                Logger.INSTANCE.warning("Write operation failed");
             }
         }
     }

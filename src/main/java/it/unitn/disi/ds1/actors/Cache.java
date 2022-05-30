@@ -6,6 +6,7 @@ import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.Logger;
 import it.unitn.disi.ds1.messages.*;
 
+import java.sql.Time;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -68,6 +69,21 @@ public class Cache extends Actor {
      * Pending requests
      */
     private HashMap<UUID, Message> pendingQueries;
+
+    /**
+     * Type of the next simulated crash
+     */
+    private Config.CrashType nextCrash;
+
+    /**
+     * After how many milliseconds the node should recover after the crash
+     */
+    private int recoverIn;
+
+    /**
+     * Whether the cache is unvailable
+     */
+    private boolean unavailable = false;
 
     /**
      * Cache constructor, by default the cache is an L2
@@ -136,6 +152,12 @@ public class Cache extends Actor {
      */
     @Override
     protected void onReadMessage(ReadMessage msg) {
+        // Check if the node should crash before read L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_BEFORE_READ) || (!this.isL1 && nextCrash == Config.CrashType.L2_BEFORE_READ)) {
+            this.crash(this.recoverIn);
+            return;
+        }
+
         // Case of a cache hit
         if (this.cachedDatabase.containsKey(msg.requestKey)) {
             Logger.INSTANCE.info(getSelf().path().name() + ": cache hit of key:" + msg.requestKey + " with ID " + this.id);
@@ -181,6 +203,12 @@ public class Cache extends Actor {
                 this.scheduleTimer(new TimeoutMessage(newReadMessage, this.parent), Config.L2_TIMEOUT);
             }
         }
+
+        // Check if the node should crash after read L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_AFTER_READ) || (!this.isL1 && nextCrash == Config.CrashType.L2_AFTER_READ)) {
+            this.crash(this.recoverIn);
+            return;
+        }
     }
 
     /**
@@ -194,6 +222,12 @@ public class Cache extends Actor {
      */
     @Override
     protected void onResponseMessage(ResponseMessage msg) {
+        // Check if the node should crash before response L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_BEFORE_RESPONSE) || (!this.isL1 && nextCrash == Config.CrashType.L2_BEFORE_RESPONSE)) {
+            this.crash(this.recoverIn);
+            return;
+        }
+
         // Check if it's a pending query for the current cache
         boolean isPendingQuery = this.pendingQueries.containsKey(msg.queryUUID);
         // Remove the pending query since we got the response
@@ -237,6 +271,12 @@ public class Cache extends Actor {
             sendTo.tell(newResponseMessage, getSelf());
             Logger.INSTANCE.info(getSelf().path().name() + " is answering " + msg.values + " to " + sendTo.path().name());
         }
+
+        // Check if the node should crash after response L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_AFTER_RESPONSE) || (!this.isL1 && nextCrash == Config.CrashType.L2_AFTER_RESPONSE)) {
+            this.crash(this.recoverIn);
+            return;
+        }
     }
 
     /**
@@ -248,12 +288,11 @@ public class Cache extends Actor {
      */
     @Override
     protected void onWriteMessage(WriteMessage msg) {
-        // TODO: L1 CRASH
-        //if (this.isL1) {
-        //   System.out.println(getSelf().path().name() + " crashed");
-        //   getContext().become(crashed());
-        //   return;
-        //}
+        // Check if the node should crash after write L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_BEFORE_WRITE) || (!this.isL1 && nextCrash == Config.CrashType.L2_BEFORE_WRITE)) {
+            this.crash(this.recoverIn);
+            return;
+        }
 
         Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the message to the parent with ID " + this.id);
 
@@ -282,6 +321,12 @@ public class Cache extends Actor {
 
         // For eventual snapshots
         capureTransitMessages(Collections.singletonMap(msg.requestKey, msg.modifiedValue), getSender());
+
+        // Check if the node should crash after write L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_AFTER_WRITE) || (!this.isL1 && nextCrash == Config.CrashType.L2_AFTER_WRITE)) {
+            this.crash(this.recoverIn);
+            return;
+        }
     }
 
     @Override
@@ -318,8 +363,21 @@ public class Cache extends Actor {
         hops = new ArrayList<>(hops);
         hops.remove(hops.size()-1);
 
+        /**
+         * Remember that the timeout is started from the L2 which is waiting for a response
+         *
+         * To avoid that onTimeout messages are put in the queue right after the response
+         * In this case we have already addressed the queries, therefore, the cache has answered,
+         * no need of setting it crashed.
+         */
         if (!this.pendingQueries.containsKey(queryUUID))
             return;
+
+        // To avoid consistency problem, this cache will not have the data updated as the L1 cache has
+        // crashed, therefore we clear the cache
+        // It is possible that, during the time in which the L1 cache was crashed,
+        // another client had performed another write request. In this case the L2 wouldn't have the updated value
+        this.cachedDatabase.clear();
 
         this.parent = this.database;
         this.isL1 = true;
@@ -357,9 +415,19 @@ public class Cache extends Actor {
     protected void onRecoveryMessage(RecoveryMessage msg) {
         // Empty the local cache
         this.clearCache();
-        // TODO maybe a better way to handle it since we may know whether one node is L1 or L2?
-        this.multicast(new FlushMessage(), this.caches);
-        Logger.INSTANCE.info(getSelf().path().name() + ": recovering: flushing the cache and multicast flush with ID " + this.id);
+
+        getContext().become(this.createReceive());
+
+        /**
+         * If the cache is an L1, all the children could have inconsistent values, thus it is better to clear children
+         * caches
+         */
+        if (this.isL1) {
+            this.multicast(new FlushMessage(), this.caches);
+            Logger.INSTANCE.info(getSelf().path().name() + " L1 recovery: flushing the cache and multicast flush with ID " + this.id);
+        }else{
+            Logger.INSTANCE.info(getSelf().path().name() + " L2 recovery: flushing the cache with ID " + this.id);
+        }
     }
 
     /**
@@ -367,11 +435,47 @@ public class Cache extends Actor {
      * Just empties the local cache
      *
      * @param msg flush message
+     *
+     * Note that this message is sent only when a cache recovers from crashes
      */
     private void onFlushMessage(FlushMessage msg) {
         // Empty the local cache
         this.clearCache();
         Logger.INSTANCE.info(getSelf().path().name() + ": flushing the cache with ID " + this.id);
+
+        // se io sono unvailable, allora vuol dire che mio padre è tornato in vita
+        // Quindi posso tornare un L2
+        if(this.unavailable) {
+            Logger.INSTANCE.info(getSelf().path().name() + ": degenerate L1 cache returns L2 with id: " + this.id);
+            getContext().become(this.createReceive());
+            this.isL1 = false;
+            this.unavailable = false;
+            this.parent = this.originalParent;
+        }
+    }
+
+    /**
+     * Method which crash the cache
+     * @param recoverIn how much time to wait for recover
+     */
+    private void crash(int recoverIn){
+        this.unavailable = false;
+        this.nextCrash = Config.CrashType.NONE;
+        this.recoverIn = 0;
+        Logger.INSTANCE.severe(getSelf().path().name() + " crashed");
+        getContext().become(crashed());
+
+        // Schedule recovery timer
+        this.scheduleTimer(new RecoveryMessage(), recoverIn);
+    }
+
+    /**
+     * When a CrashMessage is received simulate a crash based on the provided options
+     * @param msg crash message
+     */
+    private void onCrashMessage(CrashMessage msg) {
+        this.nextCrash = msg.nextCrash;
+        this.recoverIn = msg.recoverIn;
     }
 
     /**
@@ -389,6 +493,7 @@ public class Cache extends Actor {
                 .match(FlushMessage.class, this::onFlushMessage)
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .match(TimeoutMessage.class, this::onTimeoutMessage)
+                .match(CrashMessage.class, this::onCrashMessage)
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
                         this.cachedDatabase,
@@ -406,6 +511,8 @@ public class Cache extends Actor {
      */
     @Override
     public Receive crashed() {
+        // Clear the cached database when the cache crashes
+        this.cachedDatabase.clear();
         return receiveBuilder()
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .match(TokenMessage.class, msg -> onToken(
@@ -425,9 +532,11 @@ public class Cache extends Actor {
      * @return builder
      */
     public Receive unavailable() {
+        this.unavailable = true;
         return receiveBuilder()
-                .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .match(ResponseMessage.class, this::onResponseMessage)
+                .match(CrashMessage.class, this::onCrashMessage)
+                .match(FlushMessage.class, this::onFlushMessage)
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
                         this.cachedDatabase,

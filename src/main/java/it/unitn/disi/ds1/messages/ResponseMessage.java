@@ -3,7 +3,6 @@ package it.unitn.disi.ds1.messages;
 import akka.actor.ActorRef;
 import it.unitn.disi.ds1.Config;
 
-import java.io.Serializable;
 import java.util.*;
 
 public class ResponseMessage extends Message {
