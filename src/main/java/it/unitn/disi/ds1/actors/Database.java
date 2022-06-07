@@ -44,6 +44,8 @@ public class Database extends Actor {
         super(id);
         this.database = database;
         this.caches = new ArrayList<>();
+        // Initialize the sequence numbers at zero
+        this.database.forEach((k, v) -> this.seqnoCache.put(k, 0));
     }
 
     @Override
@@ -75,6 +77,9 @@ public class Database extends Actor {
     /**
      * Handler of the ReadMessage message.
      * Get the value for the specified key and send back the response to the sender
+     * **NOTE**: by assumption of the assignment, all the value requested will concern values which are present in
+     * the database
+     *
      * @param msg message containing the queried key and the list of the communication hops
      */
     @Override
@@ -83,46 +88,60 @@ public class Database extends Actor {
         List<ActorRef> newHops = new ArrayList<>(msg.hops);
 
         // Remove the next hop from the new hops array
+        // The hops contains the nodes which have been traveled to reach the database
         newHops.remove(newHops.size() - 1);
+
+        // Return the sequence number
+        Integer seqno = this.seqnoCache.get(msg.requestKey);
 
         // Generate a response message containing the response and the new hops array
         ResponseMessage responseMessage = new ResponseMessage(
                 Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey)),
                 newHops,
                 msg.queryUUID,                  // Encapsulating the query UUID
-                Config.RequestType.READ
+                msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ,
+                seqno
         );
 
+        // Network delay
+        this.delay();
         // Send the response back to the sender
         getSender().tell(responseMessage, getSelf());
 
-        Logger.INSTANCE.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name());
+        Logger.INSTANCE.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name() + " sequence number: " + seqno + " [CRITICAL] = " + msg.isCritical);
     }
 
+    /**
+     * Handler of the WriteMessage
+     * The function overrides the element in the database
+     * and sends the update to all the cache using multicast
+     * @param msg
+     */
     @Override
     protected void onWriteMessage(WriteMessage msg) {
+        // Override the value in the database
         this.database.remove(msg.requestKey);
         this.database.put(msg.requestKey, msg.modifiedValue);
 
         // Generate a new ArrayList from the message hops
+        // The hops contains the nodes which have been traveled to reach the database
         List<ActorRef> newHops = new ArrayList<>(msg.hops);
+
+        // Update the sequence number
+        Integer newSeqno = this.seqnoCache.get(msg.requestKey);
+        newSeqno++;
+
+        // Override the value in the sequence number cache
+        this.seqnoCache.remove(msg.requestKey);
+        this.seqnoCache.put(msg.requestKey, newSeqno);
 
         // Remove the next hop from the new hops array
         newHops.remove(newHops.size() - 1);
 
-        Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name());
+        Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name() + " sequence number " + newSeqno);
 
-        multicast(new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID, Config.RequestType.WRITE), this.caches);
-    }
-
-    @Override
-    protected void onCriticalReadMessage(CriticalReadMessage msg) {
-
-    }
-
-    @Override
-    protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
-
+        // Multicast to the cache the update
+        this.multicast(new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID, Config.RequestType.WRITE, newSeqno), this.caches);
     }
 
     @Override
@@ -138,12 +157,23 @@ public class Database extends Actor {
     @Override
     protected void onRecoveryMessage(RecoveryMessage msg){};
 
+    /**
+     * Handler of the messages
+     *
+     * It handles:
+     * {@link JoinCachesMessage join message}
+     * {@link TokenMessage token message} for distributed snapshot
+     * {@link StartSnapshotMessage start snapshot message} for starting the snapshot, since the only node which
+     * is connected with a spanning tree with all the other components
+     * {@link ReadMessage join message}
+     * {@link WriteMessage join message}
+     */
     @Override
     public Receive createReceive() {
         return receiveBuilder()
                 .match(JoinCachesMessage.class, this::onJoinCachesMessage)
-                .match(TokenMessage.class, msg -> onToken(msg, this.database, this.caches))
-                .match(StartSnapshotMessage.class, msg -> onStartSnapshot(msg, this.database, this.caches))
+                .match(TokenMessage.class, msg -> onToken(msg, this.database, this.seqnoCache, this.caches))
+                .match(StartSnapshotMessage.class, msg -> onStartSnapshot(msg, this.database, this.seqnoCache, this.caches))
                 .match(ReadMessage.class, this::onReadMessage)
                 .match(WriteMessage.class, this::onWriteMessage)
                 .build();

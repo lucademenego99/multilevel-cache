@@ -6,9 +6,12 @@ import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.SimpleFormatter;
 
+/**
+ * Logger class
+ */
 public class Logger {
     /**
-     * Logger
+     * Logger instance {@link java.util.logging.Logger logger}
      */
     public final static java.util.logging.Logger INSTANCE = java.util.logging.Logger.getLogger(Main.class.getName());
 

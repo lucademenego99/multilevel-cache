@@ -45,7 +45,7 @@ public class Main {
         }
 
         // TODO: automatic way of crashing L1 or L2 (if L1_crash -> indice, altrimenti un altro)
-        CrashMessage crash = new CrashMessage(Config.CrashType.L1_BEFORE_READ);
+        CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         /**
@@ -55,15 +55,40 @@ public class Main {
             // Read request for key 21
             for(int j = 0; j < Config.N_CLIENTS; j++) {
                 int requestKey = (int) database.keySet().toArray()[Config.RANDOM.nextInt(database.keySet().toArray().length)];
-                architecture.clients.get(j).tell(new ReadMessage(requestKey, new ArrayList<>(), null), ActorRef.noSender());
+                if (j == 0) {
+                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+                } else {
+                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+                }
             }
+
             try {
-                Thread.sleep(4000);
+                Thread.sleep(1000);
             } catch (Exception e) {
+                Logger.INSTANCE.severe(e.toString());
+            }
+
+            architecture.clients.get(0).tell(new WriteMessage(21, i, new ArrayList<>(), null, false), ActorRef.noSender());
+            try {
+                Thread.sleep(2000);
+           } catch (Exception e) {
                 Logger.INSTANCE.severe(e.toString());
             }
         }
 
+        /**
+         * Test Critical Read
+         */
+        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        // Sleep
+        // try {
+        //     Thread.sleep(3000);
+        // } catch (Exception e) {
+        //     Logger.INSTANCE.severe(e.toString());
+        // }
+        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, true, -1), ActorRef.noSender());
+
+        // Sleep
         try {
             Thread.sleep(3000);
         } catch (Exception e) {
@@ -182,10 +207,24 @@ public class Main {
 
     /**
      * Useful TODOs
-     * TODO: develop an automatic way for the processes' crashes
-     * TODO: test the crashes on response and onWrite/onRead for L1 caches
-     * TODO: recoveries both L1 and L2 in the cases described above
-     * TODO: sequence numbers implementation (one per data, they are returned also by read and write operations)
-     * TODO: ...
+     * TODO: critwrite needs to be implemented
+     * TODO:
+     * - client manda crit write al database
+     * - database manda a tutte le L1 crit_update con il valore aspetta un acknowledgement, manda errore a tutte le write/read/crit_write per quel valore
+     *   [ fa partire un timeout, se finisce manda un abort a tutte le L1 e non fa commit del suo vecchio valore ]
+     * - L1 manda crit_update alle L2 e aspetta un acknowledgement (blocca le read al valore nel crit_update) [ fa partire un timeout ]
+     *   [ se finisce manda un abort al database ]
+     * - L2 blocca la read del valore nella crit_update e lo tiene in una mappa, manda un acknowledgement a L1
+     * - L1 aspetta tutti gli acknowledgment e manda uno al database
+     * - database: appena ricevuto quello fa commit di quel valore (sappiamo che nessuno lo manderà ancora) e è tranquillo di andare
+     * - database: manda commit a tutte le L1 (database si sblocca) e fa update
+     * - L1 si sblocca e manda a L2 il commit e fa l'update e manda commit a tutte le L1 (database si sblocca) e fa
+     *
+     * In entrambi i casi:
+     * - se riceve abort un processo -> non fa commit del valore nella cache
+     * - se un processo va in crash, svuota la cache e esce dalla procedura,
+     * nessun problema se un client chiede un valore al processo anche quando gli altri non se ne sono accorti che è in crash,
+     * perché farà in caso (per il valore bloccato)  una richiesta al padre che può rispondergli errore (da implementare, on response della cache, risposta null ricevuta)
+     * Mentre, se il database o il padre hanno fatto commit, allora nessun problema
      */
 }

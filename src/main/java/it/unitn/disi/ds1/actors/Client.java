@@ -67,19 +67,39 @@ public class Client extends Actor {
      */
     @Override
     protected void onReadMessage(ReadMessage msg) {
+        // If it is waiting for a response, then it does not send anything
+        // This comes from the assumptions that clients cannot send multiple request at a time, but they are blocked
+        // until the response is received
         if (this.shouldReceiveResponse)
             return;
 
+        // Generate the new request
         this.shouldReceiveResponse = true;
-        ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()), null);
+
+        // Find the sequence number associated to the request key
+        Integer seqNo = this.seqnoCache.get(msg.requestKey);
+        seqNo = seqNo == null ? -1 : seqNo;
+
+        // Put the seqNo inside the request
+        ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()), null, msg.isCritical, seqNo.intValue());
+
+        // Take a random client to send the request
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
         Logger.INSTANCE.info(getSelf().path().name() + " is sending read request for key " + msg.requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+
+        // Network delay
+        this.delay();
+        // Forward the request
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
 
-        // Schedule the timer
+        // Schedule the timer for a possible timeout
         this.scheduleTimer(new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT);
     }
 
+    /**
+     * Sends a write message to a given cache
+     * @param msg on write message
+     */
     @Override
     protected void onWriteMessage(WriteMessage msg) {
         // Only one request at a time
@@ -88,24 +108,25 @@ public class Client extends Actor {
 
         this.shouldReceiveResponse = true;
 
-        WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue, Collections.singletonList(getSelf()), null);
+        // Generate the new request message
+        WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue, Collections.singletonList(getSelf()), null, msg.isCritical);
+        // Selects a new cache to ask to
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
         Logger.INSTANCE.info(getSelf().path().name() + " is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
+        // Network delay
+        this.delay();
+        // Forward the write request to the cache
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
     }
 
-    @Override
-    protected void onCriticalReadMessage(CriticalReadMessage msg) {
-
-    }
-
-    @Override
-    protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
-
-    }
-
+    /**
+     * When a timeout has been received:
+     * it is expected that the client forward the request to a new client
+     * @param msg timeout message
+     */
     @Override
     protected void onTimeoutMessage(TimeoutMessage msg){
+        // If the respose has never arrived
         if (!this.shouldReceiveResponse)
             return;
 
@@ -115,25 +136,29 @@ public class Client extends Actor {
         // Ask to another cache the same thing asked before
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
 
-
         // Tell to another cache
         int requestKey = -1, modifiedValue = -1;
+        int newSeqno = -1;
         Message newMessage = null;
         String type = "-1";
         // Recreate the message which should be sent to a new cache
         if (msg.msg instanceof ReadMessage){
             requestKey = ((ReadMessage)(msg.msg)).requestKey;
-            newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), null);
-            type = "read";
+            newSeqno = ((ReadMessage)(msg.msg)).seqno;
+            newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), null, ((ReadMessage) msg.msg).isCritical, newSeqno);
+            type = "read [CRITICAL] = " + ((ReadMessage) msg.msg).isCritical + " [seqno] = " + newSeqno;
         } else if (msg.msg instanceof WriteMessage) {
             requestKey = ((WriteMessage)(msg.msg)).requestKey;
             modifiedValue = ((WriteMessage)(msg.msg)).modifiedValue;
-            newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), null);
+            newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), null, ((WriteMessage) (msg.msg)).isCritical);
             type = "write";
         }
 
         Logger.INSTANCE.info(getSelf().path().name() + " is sending a " + type + " request to another cache for key " + requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
 
+        // Network delay
+        this.delay();
+        // Forward the message to a new cache
         this.caches.get(cacheToAskTo).tell(newMessage, getSelf());
 
 
@@ -164,7 +189,12 @@ public class Client extends Actor {
 
         Logger.INSTANCE.info("Values " + msg.values);
         if(msg.values != null){
-            Logger.INSTANCE.warning("Operation completed successful requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0]);
+            Logger.INSTANCE.warning("Operation completed successful requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] + " sequence number:" + msg.seqno);
+
+            int requestKey = (Integer) msg.values.keySet().toArray()[0];
+            // Override the value in the sequence number cache
+            this.seqnoCache.remove(requestKey);
+            this.seqnoCache.put(requestKey, msg.seqno);
         }else{
             // If the L1 cache crashed, the L2 cache became L1, so we remove it from the caches the client can communicate with
             if (msg.requestType == Config.RequestType.READ) {

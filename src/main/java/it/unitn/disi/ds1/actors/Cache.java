@@ -6,7 +6,6 @@ import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.Logger;
 import it.unitn.disi.ds1.messages.*;
 
-import java.sql.Time;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -120,6 +119,7 @@ public class Cache extends Actor {
      */
     private void clearCache() {
         this.cachedDatabase.clear();
+        this.seqnoCache.clear();
     }
 
     /**
@@ -158,28 +158,38 @@ public class Cache extends Actor {
             return;
         }
 
+        // Check if the node should crash before CRITICAL read L1 and L2
+        if((this.isL1 && msg.isCritical && nextCrash == Config.CrashType.L1_BEFORE_CRIT_READ) || (!this.isL1 && nextCrash == Config.CrashType.L2_BEFORE_CRIT_READ)) {
+            this.crash(this.recoverIn);
+            return;
+        }
+
         // Case of a cache hit
-        if (this.cachedDatabase.containsKey(msg.requestKey)) {
+        // IF IS CRITICAL DO NOT RETURN THE CACHED RESULT
+        if (!msg.isCritical && this.cachedDatabase.containsKey(msg.requestKey)) {
+            // Compare the sequence number we got
+            int currentSeqno = this.seqnoCache.get(msg.requestKey);
+            // I do not answer with older value
+            if(msg.seqno > currentSeqno){
+                Logger.INSTANCE.info(getSelf().path().name() + ": got an older value with respect to one requested with key:" + msg.requestKey + " with ID " + this.id + " namely: " + msg.seqno + " > " + currentSeqno);
+                return;
+            }
+
             Logger.INSTANCE.info(getSelf().path().name() + ": cache hit of key:" + msg.requestKey + " with ID " + this.id);
 
             // Get the list of hops, indicated by the read message
             List<ActorRef> newHops = new ArrayList<>(msg.hops);
             newHops.remove(newHops.size() - 1); // remove last element of the hop
             // Generate a new response message which contains the cached data and the new hops
-            ResponseMessage responseMessage = new ResponseMessage(Collections.singletonMap(msg.requestKey, this.cachedDatabase.get(msg.requestKey)), newHops, msg.queryUUID, Config.RequestType.READ);
+            ResponseMessage responseMessage = new ResponseMessage(Collections.singletonMap(msg.requestKey, this.cachedDatabase.get(msg.requestKey)), newHops, msg.queryUUID, Config.RequestType.READ, currentSeqno);
+            // Network delay
+            this.delay();
             // Send the message to the sender of the read message
             getSender().tell(responseMessage, getSelf());
         } else {
 
-            // TODO: L1 CRASH
-            //if (this.isL1) {
-            //   System.out.println(getSelf().path().name() + " crashed");
-            //   getContext().become(crashed());
-            //   return;
-            //}
-
             // Cache miss
-            Logger.INSTANCE.info(getSelf().path().name() + ": cache miss of key:" + msg.requestKey + " with id: " + this.id + ", asking to the parent: " + this.parent.path().name());
+            Logger.INSTANCE.info(getSelf().path().name() + ": cache miss of key:" + msg.requestKey + " with id: " + this.id + ", asking to the parent: " + this.parent.path().name() + " [CRITICAL] = " + msg.isCritical);
 
             // Generate a new request UUID
             UUID uuid;
@@ -193,15 +203,24 @@ public class Cache extends Actor {
             // Add itself to the list of hops
             newHops.add(getSelf());
             // Generate a new read message and sed it to the parent
-            ReadMessage newReadMessage = new ReadMessage(msg.requestKey, newHops, uuid);
+            ReadMessage newReadMessage = new ReadMessage(msg.requestKey, newHops, uuid, msg.isCritical, msg.seqno);
+            // Network delay
+            this.delay();
+            // Send the request to the parent
             this.parent.tell(newReadMessage, getSelf());
 
-            // This message is pending
+            // This message is pending, thus I add the message and the UUID in the setting
             this.pendingQueries.put(uuid, newReadMessage);
             if (!this.isL1) {
                 // Setting a scheduler for a possible timeout
                 this.scheduleTimer(new TimeoutMessage(newReadMessage, this.parent), Config.L2_TIMEOUT);
             }
+        }
+
+        // Check if the node should crash after CRITICAL read L1 and L2
+        if((this.isL1 && msg.isCritical && nextCrash == Config.CrashType.L1_AFTER_CRIT_READ) || (!this.isL1 && nextCrash == Config.CrashType.L2_AFTER_CRIT_READ)) {
+            this.crash(this.recoverIn);
+            return;
         }
 
         // Check if the node should crash after read L1 and L2
@@ -239,16 +258,30 @@ public class Cache extends Actor {
 
         // Store the result in the cached database
         int updatedKey = (int) msg.values.keySet().toArray()[0];
-        // TODO: maybe we should consider other cases like CRITREAD or CRITWRITE
+        int value = (int) msg.values.values().toArray()[0];
+        // TODO: maybe we should consider other cases like CRITWRITE
         // If it is a read, we should pull, if it is a write we are listening only if the value is contained in the cache
-        if(msg.requestType == Config.RequestType.READ || this.cachedDatabase.containsKey(updatedKey)){
-            Logger.INSTANCE.info(getSelf().path().name() + ": updating the cached value for key " + updatedKey);
-            this.cachedDatabase.remove(updatedKey);
-            this.cachedDatabase.putAll(msg.values);
+        if(msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD || this.cachedDatabase.containsKey(updatedKey)){
+            // Update the value and the corresponding sequence number
+            Integer currentSeqno = this.seqnoCache.get(updatedKey);
+            currentSeqno = currentSeqno == null ? -1 : currentSeqno;
+            // Always happens in FIFO consistency
+            if(currentSeqno < msg.seqno){
+                Logger.INSTANCE.info(getSelf().path().name() + ": updating the cached value for key " + updatedKey);
+                // Update value
+                this.cachedDatabase.remove(updatedKey);
+                this.cachedDatabase.putAll(msg.values);
+
+                // Update cache
+                this.seqnoCache.remove(updatedKey);
+                this.seqnoCache.put(updatedKey, msg.seqno);
+            } else {
+                Logger.INSTANCE.severe(getSelf().path().name() + ": not updating the cached value for key " + updatedKey + " value: " + value + " since I got a bigger sequence number " + "current " + currentSeqno + " > " + "received: " + msg.seqno + " current value: " + this.cachedDatabase.get(updatedKey) + " " + getSender().path().name());
+            }
         }
 
         // For eventual snapshots
-        capureTransitMessages(msg.values, getSender());
+        capureTransitMessages(msg.values, Collections.singletonMap(updatedKey, msg.seqno), getSender());
 
         // Generate a new ArrayList from the message hops
         List<ActorRef> newHops = new ArrayList<>(msg.hops);
@@ -257,16 +290,19 @@ public class Cache extends Actor {
         // Remove the next hop from the new hops (basically it is the actor to which we are sending the response)
         newHops.remove(newHops.size() - 1);
         // Create the response message with the new hops
-        ResponseMessage newResponseMessage = new ResponseMessage(msg.values, newHops, msg.queryUUID, msg.requestType);
+        ResponseMessage newResponseMessage = new ResponseMessage(msg.values, newHops, msg.queryUUID, msg.requestType, msg.seqno);
 
-        if (msg.requestType == Config.RequestType.WRITE) {// WRITE -> perform the multicast to all the peers interested
-            multicast(newResponseMessage, this.caches);
+        // WRITE -> perform the multicast to all the peers interested
+        if (this.isL1 && msg.requestType == Config.RequestType.WRITE) {
+            this.multicast(newResponseMessage, this.caches);
             Logger.INSTANCE.info(getSelf().path().name() + " is multicasting " + msg.values + " to children");
         }
 
         // If it is an L2 cache then it sends to the client
-        // If the message is a READ, regardless of the cache type it sends only to  (pulled the request)cache that have pulled the value
-        if (isPendingQuery && (!this.isL1 || msg.requestType == Config.RequestType.READ)) {
+        // If the message is a READ, regardless of the cache type it sends only to the cache that have pulled the value (pulled the request)
+        if (isPendingQuery && (!this.isL1 || msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD)) {
+            // Network delay
+            this.delay();
             // Send the newly created response to the next hop we previously saved
             sendTo.tell(newResponseMessage, getSelf());
             Logger.INSTANCE.info(getSelf().path().name() + " is answering " + msg.values + " to " + sendTo.path().name());
@@ -309,7 +345,9 @@ public class Cache extends Actor {
         newHops.add(getSelf());
 
         // Recreating and sending the new write message
-        WriteMessage newWriteMessage = new WriteMessage(msg.requestKey, msg.modifiedValue, newHops, uuid);
+        WriteMessage newWriteMessage = new WriteMessage(msg.requestKey, msg.modifiedValue, newHops, uuid, msg.isCritical);
+        // Network delay
+        this.delay();
         this.parent.tell(newWriteMessage, getSelf());
 
         // This message is pending
@@ -320,7 +358,8 @@ public class Cache extends Actor {
         }
 
         // For eventual snapshots
-        capureTransitMessages(Collections.singletonMap(msg.requestKey, msg.modifiedValue), getSender());
+        // Write does not have sequence number, hence -10 it is the default
+        capureTransitMessages(Collections.singletonMap(msg.requestKey, msg.modifiedValue), Collections.singletonMap(msg.requestKey, -10), getSender());
 
         // Check if the node should crash after write L1 and L2
         if((this.isL1 && nextCrash == Config.CrashType.L1_AFTER_WRITE) || (!this.isL1 && nextCrash == Config.CrashType.L2_AFTER_WRITE)) {
@@ -329,16 +368,11 @@ public class Cache extends Actor {
         }
     }
 
-    @Override
-    protected void onCriticalReadMessage(CriticalReadMessage msg) {
-
-    }
-
-    @Override
-    protected void onCriticalWriteMessage(CriticalWriteMessage msg) {
-
-    }
-
+    /**
+     * Handles the timeout failure
+     * In this case it simply becomes unavailable
+     * @param msg timeout message
+     */
     @Override
     protected void onTimeoutMessage(TimeoutMessage msg){
         // TODO: take care that when L1 respawn this cache need to return L2
@@ -377,8 +411,9 @@ public class Cache extends Actor {
         // crashed, therefore we clear the cache
         // It is possible that, during the time in which the L1 cache was crashed,
         // another client had performed another write request. In this case the L2 wouldn't have the updated value
-        this.cachedDatabase.clear();
+        this.clearCache();
 
+        // Degenerate case of L2 -> L1 cache
         this.parent = this.database;
         this.isL1 = true;
         this.pendingQueries.remove(queryUUID);
@@ -396,9 +431,11 @@ public class Cache extends Actor {
                 null,
                 hops,
                 queryUUID,       // Encapsulating the query UUID
-                requestType
-
+                requestType,
+                -1
         );
+        // Network delay
+        this.delay();
         // Send to the client the empty response
         hops.get(hops.size()-1).tell(responseMessage, getSelf());
     }
@@ -443,8 +480,8 @@ public class Cache extends Actor {
         this.clearCache();
         Logger.INSTANCE.info(getSelf().path().name() + ": flushing the cache with ID " + this.id);
 
-        // se io sono unvailable, allora vuol dire che mio padre è tornato in vita
-        // Quindi posso tornare un L2
+        // if I am unavailable, then it means that my father is back to life
+        // So I can return an L2
         if(this.unavailable) {
             Logger.INSTANCE.info(getSelf().path().name() + ": degenerate L1 cache returns L2 with id: " + this.id);
             getContext().become(this.createReceive());
@@ -497,6 +534,7 @@ public class Cache extends Actor {
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
                         this.cachedDatabase,
+                        this.seqnoCache,
                         Stream.concat(
                                     this.caches.stream(),
                                     Collections.singletonList(this.parent).stream()
@@ -512,12 +550,13 @@ public class Cache extends Actor {
     @Override
     public Receive crashed() {
         // Clear the cached database when the cache crashes
-        this.cachedDatabase.clear();
+        this.clearCache();
         return receiveBuilder()
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
                         this.cachedDatabase,
+                        this.seqnoCache,
                         Stream.concat(
                                 this.caches.stream(),
                                 Collections.singletonList(this.parent).stream()
@@ -540,6 +579,7 @@ public class Cache extends Actor {
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
                         this.cachedDatabase,
+                        this.seqnoCache,
                         Stream.concat(
                                     this.caches.stream(),
                                     Collections.singletonList(this.originalParent).stream()

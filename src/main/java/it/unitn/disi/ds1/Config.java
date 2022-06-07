@@ -78,6 +78,10 @@ public class Config {
         L1_AFTER_RESPONSE,
         L2_BEFORE_RESPONSE,
         L2_AFTER_RESPONSE,
+        L1_BEFORE_CRIT_READ,
+        L1_AFTER_CRIT_READ,
+        L2_BEFORE_CRIT_READ,
+        L2_AFTER_CRIT_READ,
     }
 
     /**

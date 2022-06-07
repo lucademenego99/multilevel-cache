@@ -2,5 +2,8 @@ package it.unitn.disi.ds1.messages;
 
 import java.io.Serializable;
 
-public class Message implements Serializable {
-}
+/**
+ * Base class of the message
+ * It implements {@links Serializable serializable}
+ */
+public class Message implements Serializable {};

@@ -2,7 +2,6 @@ package it.unitn.disi.ds1.messages;
 
 import akka.actor.ActorRef;
 
-import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -23,18 +22,37 @@ public class ReadMessage extends Message {
      * Request key
      */
     public final int requestKey;
+    /**
+     * Set of hops which has been traveled by the message to reach the database
+     */
     public final List<ActorRef> hops;
-
+    /**
+     * UUID of the query
+     */
     public final UUID queryUUID;
+    /**
+     * Is the ReadMessage a critical one?
+     */
+    public final boolean isCritical;
+
+    /**
+     * Sequence number for monotic read
+     */
+    public final int seqno;
 
     /**
     * Constructor of the message
      * @param requestKey key of the requested item
-     * @param hops
+     * @param hops list of hops traveled by the message
+     * @param uuid query uuid
+     * @param seqno sequence number
      */
-    public ReadMessage(int requestKey, List<ActorRef> hops, UUID uuid) {
+    public ReadMessage(int requestKey, List<ActorRef> hops, UUID uuid, boolean isCritical, int seqno) {
+        this.isCritical = isCritical;
         this.requestKey = requestKey;
         this.hops = Collections.unmodifiableList(hops);
+        this.seqno = seqno;
+        // Copy of the UUID
         if (uuid != null)
             this.queryUUID = new UUID(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
         else
