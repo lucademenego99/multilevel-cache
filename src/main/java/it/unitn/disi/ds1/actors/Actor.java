@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Actor base class, extends {@link AbstractActor actor}
@@ -65,10 +66,9 @@ public abstract class Actor extends AbstractActor {
     protected int snapshotId = 0;
 
     /**
-     * Timer
+     * Timer associated to each request
      */
-    protected Cancellable timeoutScheduler;
-
+    protected Map<UUID, Cancellable> timeoutScheduler;
 
     /**
      * Sequence number for monotonic reads
@@ -81,7 +81,7 @@ public abstract class Actor extends AbstractActor {
      */
     public Actor(int id){
         this.id = id;
-        this.timeoutScheduler = null;
+        this.timeoutScheduler = new HashMap<>();
         this.seqnoCache = new HashMap<>();
     }
 
@@ -218,10 +218,28 @@ public abstract class Actor extends AbstractActor {
      * Schedule a message after a fixed timer
      * @param msg message to schedule
      * @param timeoutMillis time to wait in milliseconds
+     * @param timerRequest request associated with that timer
      */
-    protected void scheduleTimer(Message msg, int timeoutMillis){
-        Logger.INSTANCE.info(getSelf().path().name() + " is scheduling a timeout of " + timeoutMillis);
-        this.timeoutScheduler = getContext().system().scheduler().scheduleOnce(
+    protected void scheduleTimer(Message msg, int timeoutMillis, UUID timerRequest){
+        Logger.INSTANCE.info(getSelf().path().name() + " is scheduling a cancellable timeout of " + timeoutMillis);
+        this.timeoutScheduler.put(timerRequest,                               // timer associated with the request UUID
+                getContext().system().scheduler().scheduleOnce(
+                Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),        // how frequently generate them
+                getSelf(),                                                    // destination actor reference
+                msg,                                                          // Timeout message
+                getContext().system().dispatcher(),                           // system dispatcher
+                getSelf()                                                     // source of the message (myself)
+        ));
+    }
+
+    /**
+     * Schedule a message after a fixed timer which cannot be cancelled
+     * @param msg message to schedule
+     * @param timeoutMillis time to wait in milliseconds
+     */
+    protected void scheduleDetatchedTimer(Message msg, int timeoutMillis){
+        Logger.INSTANCE.info(getSelf().path().name() + " is scheduling a NON cancellable timeout of " + timeoutMillis);
+        getContext().system().scheduler().scheduleOnce(
                 Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),        // how frequently generate them
                 getSelf(),                                                    // destination actor reference
                 msg,                                                          // Timeout message
@@ -232,12 +250,19 @@ public abstract class Actor extends AbstractActor {
 
     /**
      * Cancel the timeout {@link Cancellable timer}
+     * @param timerRequest request associated with that timer
      */
-    protected void cancelTimer(){
+    protected void cancelTimer(UUID timerRequest){
         Logger.INSTANCE.info(getSelf().path().name() + " is cancelling a timeout");
-        if(this.timeoutScheduler != null){
-            this.timeoutScheduler.cancel();
-        }
+
+        Logger.INSTANCE.severe("Timer size: " + this.timeoutScheduler.size());
+
+        // Cancel the timer
+        Cancellable timer = this.timeoutScheduler.get(timerRequest);
+        timer.cancel();
+
+        // Remove the timer from the HashMap
+        this.timeoutScheduler.remove(timerRequest);
     }
 
     /**

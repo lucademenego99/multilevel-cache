@@ -33,6 +33,7 @@ public class Main {
         // Create a database initialized with random values
         Map<Integer, Integer> database = initializeDatabase();
         database.put(21, 99);   // DEBUG
+        database.put(62, 88);   // DEBUG
 
         // Set up the main architecture of the distributed cache system
         Architecture architecture = setupStructure(system, database);
@@ -44,13 +45,16 @@ public class Main {
             Logger.INSTANCE.severe(e.toString());
         }
 
-        // TODO: automatic way of crashing L1 or L2 (if L1_crash -> indice, altrimenti un altro)
-        CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
-        architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
+        /**
+         * Test crash L2 before read
+         */
+        // CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
+        // architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         /**
-         * Random read messages
+         * Test send some random read messages
          */
+        /*
         for(int i = 0; i < Config.N_ITERATIONS; i++) {
             // Read request for key 21
             for(int j = 0; j < Config.N_CLIENTS; j++) {
@@ -75,6 +79,7 @@ public class Main {
                 Logger.INSTANCE.severe(e.toString());
             }
         }
+        */
 
         /**
          * Test Critical Read
@@ -88,6 +93,13 @@ public class Main {
         // }
         // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, true, -1), ActorRef.noSender());
 
+        /**
+         * Test Critical Write
+         */
+        // Perform a read
+        architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        architecture.clients.get(1).tell(new ReadMessage(62, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+
         // Sleep
         try {
             Thread.sleep(3000);
@@ -95,19 +107,40 @@ public class Main {
             Logger.INSTANCE.severe(e.toString());
         }
 
-        // Write request for key 21: new value is 1
-        // architecture.clients.get(0).tell(new WriteMessage(21, 1, new ArrayList<>(), null), ActorRef.noSender());
+        // Perform the critical write
+        architecture.clients.get(0).tell(new WriteMessage(21, 6, new ArrayList<>(), null, true), ActorRef.noSender());
+        architecture.clients.get(1).tell(new WriteMessage(62, 2, new ArrayList<>(), null, true), ActorRef.noSender());
+
+        // Start performing read requests with other clients on the same key
+        // Someone should get null responses if the critical write operation hasn't completed yet
+        for(int i = 0; i < Config.N_ITERATIONS; i++) {
+            // Read request for key 21
+            for(int j = 2; j < Config.N_CLIENTS; j++) {
+                architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+            }
+            try {
+                Thread.sleep(20);
+            } catch (Exception e) {
+                Logger.INSTANCE.severe(e.toString());
+            }
+        }
 
         // inputContinue();
 
         try {
-            Thread.sleep(1000);
+            Thread.sleep(3000);
         } catch (Exception e) {
             Logger.INSTANCE.severe(e.toString());
         }
 
         // Start distributed snapshot -> the cached values for key 21 should now contain 1
         architecture.cacheTree.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
+
+        try {
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            Logger.INSTANCE.severe(e.toString());
+        }
 
         // Shutdown system
         system.terminate();

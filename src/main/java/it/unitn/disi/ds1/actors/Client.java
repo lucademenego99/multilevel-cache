@@ -9,6 +9,7 @@ import it.unitn.disi.ds1.messages.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Client actor
@@ -30,6 +31,11 @@ public class Client extends Actor {
      * Remember whether you are waiting for a response from the cache or not
      */
     private boolean shouldReceiveResponse;
+
+    /**
+     * UUID request
+     */
+    private UUID requestUUID;
 
     /**
      * Client constructor
@@ -80,6 +86,9 @@ public class Client extends Actor {
         Integer seqNo = this.seqnoCache.get(msg.requestKey);
         seqNo = seqNo == null ? -1 : seqNo;
 
+        // New UUID
+        this.requestUUID = UUID.randomUUID();
+
         // Put the seqNo inside the request
         ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()), null, msg.isCritical, seqNo.intValue());
 
@@ -93,7 +102,7 @@ public class Client extends Actor {
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
 
         // Schedule the timer for a possible timeout
-        this.scheduleTimer(new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT);
+        this.scheduleTimer(new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
     }
 
     /**
@@ -108,6 +117,9 @@ public class Client extends Actor {
 
         this.shouldReceiveResponse = true;
 
+        // New UUID
+        this.requestUUID = UUID.randomUUID();
+
         // Generate the new request message
         WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue, Collections.singletonList(getSelf()), null, msg.isCritical);
         // Selects a new cache to ask to
@@ -117,6 +129,9 @@ public class Client extends Actor {
         this.delay();
         // Forward the write request to the cache
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
+
+        // Schedule the timer for a possible timeout
+        this.scheduleTimer(new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
     }
 
     /**
@@ -126,7 +141,7 @@ public class Client extends Actor {
      */
     @Override
     protected void onTimeoutMessage(TimeoutMessage msg){
-        // If the respose has never arrived
+        // If the response has never arrived
         if (!this.shouldReceiveResponse)
             return;
 
@@ -161,10 +176,10 @@ public class Client extends Actor {
         // Forward the message to a new cache
         this.caches.get(cacheToAskTo).tell(newMessage, getSelf());
 
-
         // TODO: Put check if it's ReadMessage or WriteMessage
+        this.requestUUID = UUID.randomUUID();
         // Schedule the timer
-        this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT);
+        this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
     }
 
     /**
@@ -182,14 +197,12 @@ public class Client extends Actor {
     @Override
     protected void onResponseMessage(ResponseMessage msg){
         // Cancel eventual timeout timer
-        this.cancelTimer();
-
+        this.cancelTimer(this.requestUUID);
         this.shouldReceiveResponse = false;
-        Logger.INSTANCE.info(getSelf().path().name() + " got: " + msg.values + " from " + getSender().path().name());
 
-        Logger.INSTANCE.info("Values " + msg.values);
         if(msg.values != null){
-            Logger.INSTANCE.warning("Operation completed successful requested " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] + " sequence number:" + msg.seqno);
+            String op = (msg.requestType == Config.RequestType.READ ? "READ" : "WRITE");
+            Logger.INSTANCE.warning("Operation " + op + " completed successful got " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] + " sequence number:" + msg.seqno);
 
             int requestKey = (Integer) msg.values.keySet().toArray()[0];
             // Override the value in the sequence number cache

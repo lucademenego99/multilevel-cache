@@ -57,7 +57,12 @@ public class Config {
     public final static int L2_TIMEOUT = 500;
 
     /**
-     * Number of iterations
+     * Timeout after which the Crit Write on database will abort
+     */
+    public final static int CRIT_WRITE_TIME_OUT = 800;
+
+    /**
+ * Number of iterations
      */
     public final static int N_ITERATIONS = 5;
 
@@ -82,6 +87,10 @@ public class Config {
         L1_AFTER_CRIT_READ,
         L2_BEFORE_CRIT_READ,
         L2_AFTER_CRIT_READ,
+        L1_BEFORE_CRIT_WRITE,
+        L1_AFTER_CRIT_WRITE,
+        L2_BEFORE_CRIT_WRITE,
+        L2_AFTER_CRIT_WRITE,
     }
 
     /**
@@ -92,5 +101,19 @@ public class Config {
         WRITE,
         CRITREAD,
         CRITWRITE
+    }
+
+    public enum ACResponse {
+        COMMIT,
+        ABORT
+    }
+
+    /**
+     * Possible responses during the first phase of the critical write
+     * The phase in which the votes is collected
+     */
+    public enum CUResponse {
+        OK,
+        NO
     }
 }

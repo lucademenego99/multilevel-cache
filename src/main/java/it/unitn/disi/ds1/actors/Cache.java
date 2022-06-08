@@ -55,11 +55,6 @@ public class Cache extends Actor {
     private final Map<Integer, Integer> cachedDatabase;
 
     /**
-     * cache is waiting for a message
-     */
-    private boolean shouldReceiveResponse = false;
-
-    /**
      * By default the cache is an L2
      */
     private boolean isL1;
@@ -85,6 +80,21 @@ public class Cache extends Actor {
     private boolean unavailable = false;
 
     /**
+     * List of values which are currently going to update though CRITWRITES
+     */
+    private final Map<Integer, Integer> criticalKeyValue;
+
+    /**
+     * Map uuid to key of critical writes
+     */
+    private final Map<UUID, Integer> criticalSessionKey;
+
+    /**
+     * Acknowledgements for saying OK to the database
+     */
+    private final Map<UUID, Set<ActorRef>> receivedAcksForCritWrite;
+
+    /**
      * Cache constructor, by default the cache is an L2
      * Initialize all variables
      *
@@ -100,6 +110,10 @@ public class Cache extends Actor {
         this.isL1 = false;
         this.pendingQueries = new HashMap<>();
         this.database = database;
+        // Initialize the critical keys
+        this.criticalSessionKey = new HashMap<>();
+        this.criticalKeyValue = new HashMap<>();
+        this.receivedAcksForCritWrite = new HashMap<>();
     }
 
     /**
@@ -120,6 +134,23 @@ public class Cache extends Actor {
     private void clearCache() {
         this.cachedDatabase.clear();
         this.seqnoCache.clear();
+        this.criticalKeyValue.clear();
+        this.criticalSessionKey.clear();
+        this.receivedAcksForCritWrite.clear();
+        // Empty pending queries
+        this.pendingQueries.clear();
+    }
+
+    /**
+     * Clear for critical write
+     * @param requestId id of the request
+     */
+    private void clearCriticalWrite(UUID requestId){
+        Integer oldKey = this.criticalSessionKey.get(requestId);
+        // Empty
+        this.criticalSessionKey.remove(requestId);
+        this.criticalKeyValue.remove(oldKey);
+        this.receivedAcksForCritWrite.remove(requestId);
     }
 
     /**
@@ -161,6 +192,23 @@ public class Cache extends Actor {
         // Check if the node should crash before CRITICAL read L1 and L2
         if((this.isL1 && msg.isCritical && nextCrash == Config.CrashType.L1_BEFORE_CRIT_READ) || (!this.isL1 && nextCrash == Config.CrashType.L2_BEFORE_CRIT_READ)) {
             this.crash(this.recoverIn);
+            return;
+        }
+
+        // The value is in the middle of an update
+        if(this.criticalKeyValue.containsKey(msg.requestKey)){
+            Logger.INSTANCE.severe(getSelf().path().name() + ": got a read request on a value which is in the middle of a critical write:" + msg.requestKey + " with ID " + this.id);
+
+            // Get the list of hops, indicated by the read message
+            List<ActorRef> newHops = new ArrayList<>(msg.hops);
+            newHops.remove(newHops.size() - 1); // remove last element of the hop
+
+            // I answer with an error message
+            ResponseMessage responseMessage = new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.READ, -1);
+            // Network delay
+            this.delay();
+            // Send the message to the sender of the read message
+            getSender().tell(responseMessage, getSelf());
             return;
         }
 
@@ -212,8 +260,8 @@ public class Cache extends Actor {
             // This message is pending, thus I add the message and the UUID in the setting
             this.pendingQueries.put(uuid, newReadMessage);
             if (!this.isL1) {
-                // Setting a scheduler for a possible timeout
-                this.scheduleTimer(new TimeoutMessage(newReadMessage, this.parent), Config.L2_TIMEOUT);
+                // Setting a scheduler for a possible timeout associated to that request uuid
+                this.scheduleTimer(new TimeoutMessage(newReadMessage, this.parent), Config.L2_TIMEOUT, uuid);
             }
         }
 
@@ -252,36 +300,39 @@ public class Cache extends Actor {
         // Remove the pending query since we got the response
         this.pendingQueries.remove(msg.queryUUID);
         if(!this.isL1){
-            // If there was a timer I cancel it
-            this.cancelTimer();
+            // If there was a timer associated with the pending request I cancel it
+            this.cancelTimer(msg.queryUUID);
         }
 
         // Store the result in the cached database
-        int updatedKey = (int) msg.values.keySet().toArray()[0];
-        int value = (int) msg.values.values().toArray()[0];
-        // TODO: maybe we should consider other cases like CRITWRITE
-        // If it is a read, we should pull, if it is a write we are listening only if the value is contained in the cache
-        if(msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD || this.cachedDatabase.containsKey(updatedKey)){
-            // Update the value and the corresponding sequence number
-            Integer currentSeqno = this.seqnoCache.get(updatedKey);
-            currentSeqno = currentSeqno == null ? -1 : currentSeqno;
-            // Always happens in FIFO consistency
-            if(currentSeqno < msg.seqno){
-                Logger.INSTANCE.info(getSelf().path().name() + ": updating the cached value for key " + updatedKey);
-                // Update value
-                this.cachedDatabase.remove(updatedKey);
-                this.cachedDatabase.putAll(msg.values);
 
-                // Update cache
-                this.seqnoCache.remove(updatedKey);
-                this.seqnoCache.put(updatedKey, msg.seqno);
-            } else {
-                Logger.INSTANCE.severe(getSelf().path().name() + ": not updating the cached value for key " + updatedKey + " value: " + value + " since I got a bigger sequence number " + "current " + currentSeqno + " > " + "received: " + msg.seqno + " current value: " + this.cachedDatabase.get(updatedKey) + " " + getSender().path().name());
+        if (msg.values != null) {
+            int updatedKey = (int) msg.values.keySet().toArray()[0];
+            Integer value = (int) msg.values.values().toArray()[0];
+            // TODO: maybe we should consider other cases like CRITWRITE
+            // If it is a read, we should pull, if it is a write we are listening only if the value is contained in the cache
+            if (msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD || this.cachedDatabase.containsKey(updatedKey)) {
+                // Update the value and the corresponding sequence number
+                Integer currentSeqno = this.seqnoCache.get(updatedKey);
+                currentSeqno = currentSeqno == null ? -1 : currentSeqno;
+                // Always happens in FIFO consistency
+                if (currentSeqno < msg.seqno) {
+                    Logger.INSTANCE.info(getSelf().path().name() + ": updating the cached value for key " + updatedKey);
+                    // Update value
+                    this.cachedDatabase.remove(updatedKey);
+                    this.cachedDatabase.putAll(msg.values);
+
+                    // Update cache
+                    this.seqnoCache.remove(updatedKey);
+                    this.seqnoCache.put(updatedKey, msg.seqno);
+                } else {
+                    Logger.INSTANCE.severe(getSelf().path().name() + ": not updating the cached value for key " + updatedKey + " value: " + value + " since I got a bigger sequence number " + "current " + currentSeqno + " > " + "received: " + msg.seqno + " current value: " + this.cachedDatabase.get(updatedKey) + " " + getSender().path().name());
+                }
             }
-        }
 
-        // For eventual snapshots
-        capureTransitMessages(msg.values, Collections.singletonMap(updatedKey, msg.seqno), getSender());
+            // For eventual snapshots
+            capureTransitMessages(msg.values, Collections.singletonMap(updatedKey, msg.seqno), getSender());
+        }
 
         // Generate a new ArrayList from the message hops
         List<ActorRef> newHops = new ArrayList<>(msg.hops);
@@ -300,6 +351,8 @@ public class Cache extends Actor {
 
         // If it is an L2 cache then it sends to the client
         // If the message is a READ, regardless of the cache type it sends only to the cache that have pulled the value (pulled the request)
+        // Also for returning the WRITE answer to the client
+        // Notice: the other L2 caches won't answer to the client because isPendingQuery resolves to false
         if (isPendingQuery && (!this.isL1 || msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD)) {
             // Network delay
             this.delay();
@@ -330,6 +383,29 @@ public class Cache extends Actor {
             return;
         }
 
+        // Check if the node should crash after critical write L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_BEFORE_CRIT_WRITE) || (!this.isL1 && nextCrash == Config.CrashType.L2_BEFORE_CRIT_WRITE)) {
+            this.crash(this.recoverIn);
+            return;
+        }
+
+        // The value is in the middle of an update
+        if(this.criticalKeyValue.containsKey(msg.requestKey)){
+            Logger.INSTANCE.severe(getSelf().path().name() + ": got a write request on a value which is in the middle of a critical write:" + msg.requestKey + " with ID " + this.id);
+
+            // Get the list of hops, indicated by the read message
+            List<ActorRef> newHops = new ArrayList<>(msg.hops);
+            newHops.remove(newHops.size() - 1); // remove last element of the hop
+
+            // I answer with an error message
+            ResponseMessage responseMessage = new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.READ, -1);
+            // Network delay
+            this.delay();
+            // Send the message to the sender of the read message
+            getSender().tell(responseMessage, getSelf());
+            return;
+        }
+
         Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the message to the parent with ID " + this.id);
 
         // Generate a new request UUID
@@ -353,18 +429,155 @@ public class Cache extends Actor {
         // This message is pending
         this.pendingQueries.put(uuid, newWriteMessage);
         if (!this.isL1) {
-            // Setting a scheduler for a possible timeout
-            this.scheduleTimer(new TimeoutMessage(newWriteMessage, this.parent), Config.L2_TIMEOUT);
+            // Setting a scheduler for a possible timeout associated with uuid
+            this.scheduleTimer(new TimeoutMessage(newWriteMessage, this.parent), Config.L2_TIMEOUT, uuid);
         }
 
         // For eventual snapshots
         // Write does not have sequence number, hence -10 it is the default
         capureTransitMessages(Collections.singletonMap(msg.requestKey, msg.modifiedValue), Collections.singletonMap(msg.requestKey, -10), getSender());
 
+        // Check if the node should crash after critical write L1 and L2
+        if((this.isL1 && nextCrash == Config.CrashType.L1_AFTER_CRIT_WRITE) || (!this.isL1 && nextCrash == Config.CrashType.L2_AFTER_CRIT_WRITE)) {
+            this.crash(this.recoverIn);
+            return;
+        }
+
         // Check if the node should crash after write L1 and L2
         if((this.isL1 && nextCrash == Config.CrashType.L1_AFTER_WRITE) || (!this.isL1 && nextCrash == Config.CrashType.L2_AFTER_WRITE)) {
             this.crash(this.recoverIn);
             return;
+        }
+    }
+
+    protected void onCriticalUpdateMessage(CriticalUpdateMessage msg) {
+        // Locking the value
+        this.criticalSessionKey.put(msg.queryUUID, msg.updatedKey);
+        this.criticalKeyValue.put(msg.updatedKey, msg.updatedValue);
+
+        if (this.isL1) {
+            // Send the critical update message to L2 caches - we expect an acknowledgement containing COMMIT/ABORT
+            this.multicast(new CriticalUpdateMessage(msg.updatedKey, msg.updatedValue, msg.queryUUID, msg.hops), this.caches);
+
+            Logger.INSTANCE.info(getSelf().path().name() + " sending the update messages to my children, hope they will answer OK for " + msg.updatedKey + " value:" + msg.updatedValue);
+            // If the L1 cache doesn't receive an acknowledgement within a given timeout, abort the write and return error
+            this.scheduleTimer(new CriticalUpdateTimeoutMessage(msg.queryUUID, msg.hops), Config.CRIT_WRITE_TIME_OUT, msg.queryUUID);
+        } else {
+            Logger.INSTANCE.info(getSelf().path().name() + " sending the OK message to the parent " + msg.updatedKey + " value:" + msg.updatedValue);
+
+            // Send acknowledgement to the L1 cache
+            this.parent.tell(new CriticalUpdateResponseMessage(Config.CUResponse.OK, msg.queryUUID, msg.hops), getSelf());
+        }
+    }
+
+    protected void onCriticalUpdateTimeoutMessage(CriticalUpdateTimeoutMessage msg) {
+        /**
+         * Remember that the timeout is started from the database which is waiting for a response
+         *
+         * To avoid that onTimeout messages are put in the queue right after the response
+         * In this case we have already addressed the queries, therefore, the all the caches have answered
+         */
+        if(!this.criticalSessionKey.containsKey(msg.queryUUID)){
+            return;
+        }
+
+        Logger.INSTANCE.warning(getSelf().path().name() + " timed out for key " + this.criticalSessionKey.get(msg.queryUUID) + ", sending NO response to the database");
+        // Network delay
+        this.delay();
+        // If the L2 cache didn't respond in time, send abort to the database
+        this.parent.tell(new CriticalUpdateResponseMessage(Config.CUResponse.NO, msg.queryUUID, msg.hops), getSelf());
+    }
+
+    protected void onCriticalUpdateResponseMessage(CriticalUpdateResponseMessage msg) {
+        Integer key = this.criticalSessionKey.get(msg.queryUUID);
+        Integer value = this.criticalKeyValue.get(key);
+        // Got an OK -> voted yes
+        // I got OK from an L2 cache
+        if (msg.response == Config.CUResponse.OK && this.isL1) {
+            // Add the sender to the list of received acknowledgements
+            if (!this.receivedAcksForCritWrite.containsKey(msg.queryUUID)) {
+                this.receivedAcksForCritWrite.put(msg.queryUUID, new HashSet<>());
+            }
+            this.receivedAcksForCritWrite.get(msg.queryUUID).add(getSender());
+
+            // If the L1 cache has received all acknowledgements, proceed with the protocol's flow
+            if (this.receivedAcksForCritWrite.get(msg.queryUUID).containsAll(this.caches)) {
+                // Network delay
+                this.delay();
+                // Send OK to the database, since all children L2 caches have sent an acknowledged
+                this.parent.tell(new CriticalUpdateResponseMessage(Config.CUResponse.OK, msg.queryUUID, msg.hops), getSelf());
+
+                Logger.INSTANCE.info(getSelf().path().name() + " L1 cache got a CriticalUpdateResponseMessage with all OK, sending it to the parent! for " + key + " value: " + value);
+            }
+        } else if (msg.response == Config.CUResponse.NO && this.isL1) {
+            // NEVER HERE, L2 will never decide NO
+
+            // Network delay
+            this.delay();
+            // Got NO from an L2 cache - send NO to the database
+            this.parent.tell(new CriticalUpdateResponseMessage(Config.CUResponse.NO, msg.queryUUID, msg.hops), getSelf());
+
+            Logger.INSTANCE.info(getSelf().path().name() + " L1 cache got a CriticalUpdateResponseMessage with one NO, sending it to the parent! for " + key + " value: " + value);
+        } else {
+            Logger.INSTANCE.severe(getSelf().path().name() + " L2 cache got a CriticalUpdateResponseMessage");
+        }
+    }
+
+    protected void onCriticalWriteResponseMessage(CriticalWriteResponseMessage msg) {
+        int keyToUpdate = this.criticalSessionKey.get(msg.queryUUID);
+        int newValue = this.criticalKeyValue.get(keyToUpdate);
+
+        // Generate a new ArrayList from the message hops
+        List<ActorRef> newHops = new ArrayList<>(msg.hops);
+        // Save the next hop of the communication
+        ActorRef sendTo = msg.hops.get(msg.hops.size() - 1);
+        // Remove the next hop from the new hops (basically it is the actor to which we are sending the response)
+        newHops.remove(newHops.size() - 1);
+
+        if (msg.finalDecision == Config.ACResponse.COMMIT) {
+            // Got COMMIT
+            Logger.INSTANCE.info(getSelf().path().name() + " got COMMIT decision from parent and key " + keyToUpdate);
+            // If the key was already inside the cachedDatabase, update it
+
+            // Update new value
+            if (this.cachedDatabase.containsKey(keyToUpdate)) {
+                this.cachedDatabase.remove(keyToUpdate);
+                this.cachedDatabase.put(keyToUpdate, newValue);
+
+                // Override the value in the sequence number cache
+                this.seqnoCache.remove(keyToUpdate);
+                this.seqnoCache.put(keyToUpdate, msg.seqno);
+            }
+
+            // Clear critical writes value
+            this.clearCriticalWrite(msg.queryUUID);
+
+            // Send commit to the caches with the new sequence number to be updated
+            this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.COMMIT, msg.queryUUID, newHops, msg.seqno), this.caches);
+        } else {
+            // Got ABORT
+            Logger.INSTANCE.warning(getSelf().path().name() + " got ABORT decision from parent and key " + keyToUpdate);
+            this.clearCriticalWrite(msg.queryUUID);
+            this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, newHops, null), this.caches);
+        }
+
+        // Check if it's a pending query for the current cache
+        boolean isPendingQuery = this.pendingQueries.containsKey(msg.queryUUID);
+
+        // Send final response to the client if the cache is L2
+        if (!this.isL1 && isPendingQuery) {
+            // Now that we got the response, remove the request from pendingQueries
+            this.pendingQueries.remove(msg.queryUUID);
+
+            // Create the response message with the new hops
+            HashMap<Integer, Integer> responseMap = new HashMap<>();
+            responseMap.put(keyToUpdate, newValue);
+            ResponseMessage newResponseMessage = new ResponseMessage(msg.finalDecision == Config.ACResponse.COMMIT ? responseMap : null, newHops, msg.queryUUID, Config.RequestType.CRITWRITE, msg.seqno);
+
+            // Network delay
+            this.delay();
+            // Send the newly created response to the next hop we previously saved
+            sendTo.tell(newResponseMessage, getSelf());
         }
     }
 
@@ -503,7 +716,7 @@ public class Cache extends Actor {
         getContext().become(crashed());
 
         // Schedule recovery timer
-        this.scheduleTimer(new RecoveryMessage(), recoverIn);
+        this.scheduleDetatchedTimer(new RecoveryMessage(), recoverIn);
     }
 
     /**
@@ -530,6 +743,10 @@ public class Cache extends Actor {
                 .match(FlushMessage.class, this::onFlushMessage)
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .match(TimeoutMessage.class, this::onTimeoutMessage)
+                .match(CriticalUpdateMessage.class, this::onCriticalUpdateMessage)
+                .match(CriticalUpdateResponseMessage.class, this::onCriticalUpdateResponseMessage)
+                .match(CriticalUpdateTimeoutMessage.class, this::onCriticalUpdateTimeoutMessage)
+                .match(CriticalWriteResponseMessage.class, this::onCriticalWriteResponseMessage)
                 .match(CrashMessage.class, this::onCrashMessage)
                 .match(TokenMessage.class, msg -> onToken(
                         msg,
