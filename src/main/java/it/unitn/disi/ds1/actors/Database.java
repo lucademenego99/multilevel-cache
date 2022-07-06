@@ -7,6 +7,7 @@ import it.unitn.disi.ds1.Logger;
 import it.unitn.disi.ds1.messages.*;
 
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * Database actor
@@ -90,7 +91,7 @@ public class Database extends Actor {
     @Override
     protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
-        Logger.INSTANCE.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
+        Logger.DEBUG.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
     }
 
     /**
@@ -117,7 +118,7 @@ public class Database extends Actor {
         Map<Integer, Integer> valueToReturn = Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey));
         // Value on CRITWRITE
         if(criticalKeyValue.containsKey(msg.requestKey)){
-            Logger.INSTANCE.severe(getSelf().path().name() + " cannot read a message which is on critical update " + msg.requestKey);
+            // Logger.INSTANCE.severe(getSelf().path().name() + " cannot read a message which is on critical update " + msg.requestKey);
             valueToReturn = null;
         }
 
@@ -135,7 +136,8 @@ public class Database extends Actor {
         // Send the response back to the sender
         getSender().tell(responseMessage, getSelf());
 
-        Logger.INSTANCE.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name() + " sequence number: " + seqno + " [CRITICAL] = " + msg.isCritical);
+        Logger.logCheck(Level.INFO, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, true, msg.requestKey, this.database.get(msg.requestKey), seqno, "");
+        Logger.DEBUG.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name() + " sequence number: " + seqno + " [CRITICAL] = " + msg.isCritical);
     }
 
     /**
@@ -149,7 +151,7 @@ public class Database extends Actor {
         // Value on CRITWRITE
         // TODO
         if(criticalKeyValue.containsKey(msg.requestKey)){
-            Logger.INSTANCE.severe(getSelf().path().name() + " cannot write a message which is on critical update " + msg.requestKey);
+            Logger.DEBUG.severe(getSelf().path().name() + " cannot write a message which is on critical update " + msg.requestKey);
             // Get the list of hops
             List<ActorRef> newHops = new ArrayList<>(msg.hops);
             // Remove the next hop from the new hops array
@@ -162,6 +164,7 @@ public class Database extends Actor {
             this.delay();
             // Send the message
             getSender().tell(new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.WRITE, seqno), getSelf());
+            Logger.logCheck(Level.INFO, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, true, msg.requestKey, null, seqno, "");
             return;
         }
 
@@ -176,7 +179,7 @@ public class Database extends Actor {
         if (msg.isCritical) {
             this.criticalSessionKey.put(msg.queryUUID, msg.requestKey);
             this.criticalKeyValue.put(msg.requestKey, msg.modifiedValue);
-            Logger.INSTANCE.info(getSelf().path().name() + " Sending the request for critical write to all the caches, hope to receive all OK! for " + msg.requestKey + " value: " + msg.modifiedValue);
+            Logger.DEBUG.info(getSelf().path().name() + " Sending the request for critical write to all the caches, hope to receive all OK! for " + msg.requestKey + " value: " + msg.modifiedValue);
 
             // Send the critical update message to L1 caches - we expect an acknowledgement containing COMMIT/ABORT
             this.multicast(new CriticalUpdateMessage(msg.requestKey, msg.modifiedValue, msg.queryUUID, newHops), this.caches);
@@ -198,7 +201,7 @@ public class Database extends Actor {
         this.seqnoCache.remove(msg.requestKey);
         this.seqnoCache.put(msg.requestKey, newSeqno);
 
-        Logger.INSTANCE.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name() + " sequence number " + newSeqno);
+        Logger.DEBUG.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name() + " sequence number " + newSeqno);
 
         // Multicast to the cache the update
         this.multicast(new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID, Config.RequestType.WRITE, newSeqno), this.caches);
@@ -221,7 +224,7 @@ public class Database extends Actor {
         }
         Integer key = this.criticalSessionKey.get(msg.queryUUID);
         Integer value = this.criticalKeyValue.get(key);
-        Logger.INSTANCE.info(getSelf().path().name() + " Aborting the critical write for " + key + " value " + value);
+        Logger.DEBUG.info(getSelf().path().name() + " Aborting the critical write for " + key + " value " + value);
         // TODO: we will also need to send the response to the client, hence we need the usual hops etc
         this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null), this.caches);
     }
@@ -266,7 +269,7 @@ public class Database extends Actor {
                 // Clear critical writes value
                 this.clearCriticalWrite(msg.queryUUID);
                 
-                Logger.INSTANCE.info(getSelf().path().name() + " Committing since all answers OK! the critical write for " + keyToUpdate + " value " + newValue);
+                Logger.DEBUG.info(getSelf().path().name() + " Committing since all answers OK! the critical write for " + keyToUpdate + " value " + newValue);
                 
                 // Send commit to the caches with the new sequence number to be updated
                 this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.COMMIT, msg.queryUUID, msg.hops, newSeqno), this.caches);
@@ -276,7 +279,7 @@ public class Database extends Actor {
             this.clearCriticalWrite(msg.queryUUID);
             Integer key = this.criticalSessionKey.get(msg.queryUUID);
             Integer value = this.criticalKeyValue.get(key);
-            Logger.INSTANCE.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " + key + " value " + value);
+            Logger.DEBUG.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " + key + " value " + value);
             // TODO: we will also need to send the response to the client, hence we need the usual hops etc
             this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null), this.caches);
         }

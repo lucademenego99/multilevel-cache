@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  * Actor base class, extends {@link AbstractActor actor}
@@ -109,7 +110,7 @@ public abstract class Actor extends AbstractActor {
      * @param peers List of peers
      */
     private void sendTokens(List<ActorRef> peers) {
-        Logger.INSTANCE.finer(getSelf().path().name() + " with id " + this.id +" sending tokens");
+        Logger.DEBUG.finer(getSelf().path().name() + " with id " + this.id +" sending tokens");
         TokenMessage t = new TokenMessage(this.snapshotId);
         this.multicast(t, peers);
     }
@@ -164,7 +165,7 @@ public abstract class Actor extends AbstractActor {
 
         if(this.snapshotEnded(peers)){
             // Terminates the snapshot
-            Logger.INSTANCE.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: "+ this.snapshotId + " state: " + this.currentCache + " sequence numbers: " + this.currentSeqNo + " messages in transit: " + this.dataInTransit + " sequence numbers in transit:" + this.seqNoInTransit);
+            Logger.DEBUG.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: "+ this.snapshotId + " state: " + this.currentCache + " sequence numbers: " + this.currentSeqNo + " messages in transit: " + this.dataInTransit + " sequence numbers in transit:" + this.seqNoInTransit);
             this.terminateSnapshot();
         }
     }
@@ -221,7 +222,7 @@ public abstract class Actor extends AbstractActor {
      * @param timerRequest request associated with that timer
      */
     protected void scheduleTimer(Message msg, int timeoutMillis, UUID timerRequest){
-        Logger.INSTANCE.info(getSelf().path().name() + " is scheduling a cancellable timeout of " + timeoutMillis);
+        Logger.DEBUG.info(getSelf().path().name() + " is scheduling a cancellable timeout of " + timeoutMillis);
         this.timeoutScheduler.put(timerRequest,                               // timer associated with the request UUID
                 getContext().system().scheduler().scheduleOnce(
                 Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),        // how frequently generate them
@@ -238,7 +239,7 @@ public abstract class Actor extends AbstractActor {
      * @param timeoutMillis time to wait in milliseconds
      */
     protected void scheduleDetatchedTimer(Message msg, int timeoutMillis){
-        Logger.INSTANCE.info(getSelf().path().name() + " is scheduling a NON cancellable timeout of " + timeoutMillis);
+        Logger.DEBUG.info(getSelf().path().name() + " is scheduling a NON cancellable timeout of " + timeoutMillis);
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),        // how frequently generate them
                 getSelf(),                                                    // destination actor reference
@@ -253,9 +254,9 @@ public abstract class Actor extends AbstractActor {
      * @param timerRequest request associated with that timer
      */
     protected void cancelTimer(UUID timerRequest){
-        Logger.INSTANCE.info(getSelf().path().name() + " is cancelling a timeout");
+        Logger.DEBUG.info(getSelf().path().name() + " is cancelling a timeout");
 
-        Logger.INSTANCE.severe("Timer size: " + this.timeoutScheduler.size());
+        Logger.DEBUG.severe("Timer size: " + this.timeoutScheduler.size());
 
         // Cancel the timer
         Cancellable timer = this.timeoutScheduler.get(timerRequest);
@@ -275,7 +276,7 @@ public abstract class Actor extends AbstractActor {
     protected void onStartSnapshot(StartSnapshotMessage msg, Map<Integer, Integer> data, Map<Integer, Integer> seqno, List<ActorRef> peers) {
         // we've been asked to initiate a snapshot
         this.snapshotId += 1;
-        Logger.INSTANCE.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: " + this.snapshotId + " starting a snapshot");
+        Logger.DEBUG.info(getSelf().path().name() + " with id: " + this.id + " snapshotId: " + this.snapshotId + " starting a snapshot");
         this.captureState(data, seqno);
         this.sendTokens(peers);
     }
@@ -316,5 +317,14 @@ public abstract class Actor extends AbstractActor {
                 .match(RecoveryMessage.class, this::onRecoveryMessage)
                 .matchAny(msg -> {})
                 .build();
+    }
+
+    /**
+     * Get Id from Name
+     * @param name name of the actor
+     * @return Integer
+     */
+    public Integer getIdFromName(String name){
+        return new Integer(name.substring(name.lastIndexOf("-") + 1));
     }
 }

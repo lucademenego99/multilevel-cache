@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  * Client actor
@@ -64,7 +65,7 @@ public class Client extends Actor {
     @Override
     protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
-        Logger.INSTANCE.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
+        Logger.DEBUG.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
     }
 
     /**
@@ -94,7 +95,12 @@ public class Client extends Actor {
 
         // Take a random client to send the request
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
-        Logger.INSTANCE.info(getSelf().path().name() + " is sending read request for key " + msg.requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+
+        Logger.DEBUG.info(getSelf().path().name() + " is sending read request for key " + msg.requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
+                this.caches.get(cacheToAskTo).path().name()), msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.READ,
+                false, msg.requestKey, null, seqNo.intValue(), "Request read for key [CRIT: " + msg.isCritical + "]"
+        );
 
         // Network delay
         this.delay();
@@ -124,7 +130,13 @@ public class Client extends Actor {
         WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue, Collections.singletonList(getSelf()), null, msg.isCritical);
         // Selects a new cache to ask to
         int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
-        Logger.INSTANCE.info(getSelf().path().name() + " is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
+
+        Logger.DEBUG.info(getSelf().path().name() + " is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
+                this.caches.get(cacheToAskTo).path().name()), msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE,
+                false, msg.requestKey, msg.modifiedValue, null, "Request write for key [CRIT: " + msg.isCritical + "]"
+        );
+
         // Network delay
         this.delay();
         // Forward the write request to the cache
@@ -156,20 +168,30 @@ public class Client extends Actor {
         int newSeqno = -1;
         Message newMessage = null;
         String type = "-1";
+        Config.RequestType reqType = Config.RequestType.READ;
+        boolean critical = false;
         // Recreate the message which should be sent to a new cache
         if (msg.msg instanceof ReadMessage){
             requestKey = ((ReadMessage)(msg.msg)).requestKey;
             newSeqno = ((ReadMessage)(msg.msg)).seqno;
             newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), null, ((ReadMessage) msg.msg).isCritical, newSeqno);
-            type = "read [CRITICAL] = " + ((ReadMessage) msg.msg).isCritical + " [seqno] = " + newSeqno;
+            critical = ((ReadMessage) msg.msg).isCritical;
+            reqType = critical ? Config.RequestType.CRITREAD : Config.RequestType.READ;
+            type = "read [CRITICAL] = " + critical + " [seqno] = " + newSeqno;
         } else if (msg.msg instanceof WriteMessage) {
             requestKey = ((WriteMessage)(msg.msg)).requestKey;
             modifiedValue = ((WriteMessage)(msg.msg)).modifiedValue;
-            newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), null, ((WriteMessage) (msg.msg)).isCritical);
+            critical = ((WriteMessage) (msg.msg)).isCritical;
+            reqType = critical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE;
+            newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), null, critical);
             type = "write";
         }
 
-        Logger.INSTANCE.info(getSelf().path().name() + " is sending a " + type + " request to another cache for key " + requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.DEBUG.info(getSelf().path().name() + " is sending a " + type + " request to another cache for key " + requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
+                        this.caches.get(cacheToAskTo).path().name()), reqType,
+                false, requestKey, modifiedValue, newSeqno, "Request to another cache for key [CRIT: " + critical + "]"
+        );
 
         // Network delay
         this.delay();
@@ -202,7 +224,7 @@ public class Client extends Actor {
 
         if(msg.values != null){
             String op = (msg.requestType == Config.RequestType.READ ? "READ" : "WRITE");
-            Logger.INSTANCE.warning("Operation " + op + " completed successful got " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] + " sequence number:" + msg.seqno);
+            Logger.DEBUG.warning("Operation " + op + " completed successful got " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] + " sequence number:" + msg.seqno);
 
             int requestKey = (Integer) msg.values.keySet().toArray()[0];
             // Override the value in the sequence number cache
@@ -211,10 +233,10 @@ public class Client extends Actor {
         }else{
             // If the L1 cache crashed, the L2 cache became L1, so we remove it from the caches the client can communicate with
             if (msg.requestType == Config.RequestType.READ) {
-                Logger.INSTANCE.warning("Read operation failed");
+                Logger.DEBUG.warning("Read operation failed");
                 this.caches.remove(getSender());
             } else if (msg.requestType == Config.RequestType.WRITE) {
-                Logger.INSTANCE.warning("Write operation failed");
+                Logger.DEBUG.warning("Write operation failed");
             }
         }
     }
