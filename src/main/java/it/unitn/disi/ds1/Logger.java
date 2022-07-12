@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.*;
 
 
@@ -14,10 +16,8 @@ class VerySimpleFormatter extends Formatter {
      */
     @Override
     public String format(LogRecord record) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(record.getLevel()).append(':');
-        sb.append(record.getMessage()).append('\n');
-        return sb.toString();
+        return String.valueOf(record.getLevel()) + ':' +
+                record.getMessage() + '\n';
     }
 }
 
@@ -28,7 +28,7 @@ public class Logger {
     /**
      * Logger instance {@link java.util.logging.Logger logger}
      */
-    private final static java.util.logging.Logger CHECK = java.util.logging.Logger.getLogger(Main.class.getName());
+    private final static java.util.logging.Logger CHECK = java.util.logging.Logger.getLogger("check-solution-logger");
 
     public final static java.util.logging.Logger DEBUG = java.util.logging.Logger.getLogger(Main.class.getName());
 
@@ -65,13 +65,21 @@ public class Logger {
      * @param message message additional
      */
     public static void logCheck(Level logLevel, Integer requesterProcessId, Integer receiverProcessId, Config.RequestType requestType,
-                           Boolean isResponse, Integer key, Integer value, Integer seqNo, String message){
+                           Boolean isResponse, Integer key, Integer value, Integer seqNo, String message, UUID queryID){
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
         String logMessage = MessageFormat.format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}",
                 logLevel, timeStamp, requesterProcessId, receiverProcessId,
-                requestType.name(), isResponse, key, value, seqNo, message
+                requestType.name(), isResponse, key, value, seqNo, queryID, message
         );
         // Debug log level
         Logger.CHECK.log(logLevel, logMessage);
+    }
+
+    public static void logDatabase(Map<Integer, Integer> database) {
+        StringBuilder keyValuePairs = new StringBuilder();
+        for (Map.Entry<Integer,Integer> entry : database.entrySet()) {
+            keyValuePairs.append("\t").append(entry.getKey()).append("-").append(entry.getValue());
+        }
+        Logger.CHECK.log(Level.CONFIG, keyValuePairs.toString());
     }
 }

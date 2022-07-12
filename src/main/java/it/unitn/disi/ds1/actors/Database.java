@@ -128,6 +128,7 @@ public class Database extends Actor {
                 newHops,
                 msg.queryUUID,                  // Encapsulating the query UUID
                 msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ,
+                msg.isCritical,
                 seqno
         );
 
@@ -136,7 +137,7 @@ public class Database extends Actor {
         // Send the response back to the sender
         getSender().tell(responseMessage, getSelf());
 
-        Logger.logCheck(Level.INFO, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, true, msg.requestKey, this.database.get(msg.requestKey), seqno, "");
+        Logger.logCheck(Level.FINE, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, true, msg.requestKey, valueToReturn == null ? null : this.database.get(msg.requestKey), seqno, "Response for key [CRIT: " + msg.isCritical + "]", msg.queryUUID);
         Logger.DEBUG.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name() + " sequence number: " + seqno + " [CRITICAL] = " + msg.isCritical);
     }
 
@@ -163,8 +164,8 @@ public class Database extends Actor {
             // Network delay
             this.delay();
             // Send the message
-            getSender().tell(new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.WRITE, seqno), getSelf());
-            Logger.logCheck(Level.INFO, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, true, msg.requestKey, null, seqno, "");
+            getSender().tell(new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.WRITE, msg.isCritical, seqno), getSelf());
+            Logger.logCheck(Level.INFO, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE, true, msg.requestKey, null, seqno, "Write request for key [CRIT: " + msg.isCritical + "]", msg.queryUUID);
             return;
         }
 
@@ -204,7 +205,7 @@ public class Database extends Actor {
         Logger.DEBUG.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name() + " sequence number " + newSeqno);
 
         // Multicast to the cache the update
-        this.multicast(new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID, Config.RequestType.WRITE, newSeqno), this.caches);
+        this.multicastAndCheck(new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID, Config.RequestType.WRITE, false, newSeqno), this.caches, Config.RequestType.WRITE, msg.requestKey, msg.modifiedValue, newSeqno, false, msg.queryUUID);
     }
 
     /**
@@ -272,7 +273,7 @@ public class Database extends Actor {
                 Logger.DEBUG.info(getSelf().path().name() + " Committing since all answers OK! the critical write for " + keyToUpdate + " value " + newValue);
                 
                 // Send commit to the caches with the new sequence number to be updated
-                this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.COMMIT, msg.queryUUID, msg.hops, newSeqno), this.caches);
+                this.multicastAndCheck(new CriticalWriteResponseMessage(Config.ACResponse.COMMIT, msg.queryUUID, msg.hops, newSeqno), this.caches, Config.RequestType.CRITWRITE, keyToUpdate, newValue, newSeqno, true, msg.queryUUID);
             }
         } else {
             // Got NO, I can abort
@@ -281,7 +282,7 @@ public class Database extends Actor {
             Integer value = this.criticalKeyValue.get(key);
             Logger.DEBUG.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " + key + " value " + value);
             // TODO: we will also need to send the response to the client, hence we need the usual hops etc
-            this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null), this.caches);
+            this.multicastAndCheck(new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null), this.caches, Config.RequestType.CRITWRITE, key, null, -1, true, msg.queryUUID);
         }
     }
 

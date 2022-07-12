@@ -32,6 +32,11 @@ public class ResponseMessage extends Message {
     public final UUID queryUUID;
 
     /**
+     * Is the ReadMessage a critical one?
+     */
+    public final boolean isCritical;
+
+    /**
      * Request type
      */
     public final Config.RequestType requestType;
@@ -49,7 +54,9 @@ public class ResponseMessage extends Message {
      * @param requestType type of request
      * @param seqno sequence number
      */
-    public ResponseMessage(Map<Integer, Integer> values, List<ActorRef> hops, UUID uuid, Config.RequestType requestType, int seqno) {
+    public ResponseMessage(Map<Integer, Integer> values, List<ActorRef> hops, UUID uuid, Config.RequestType requestType, boolean isCritical, int seqno) {
+        this.isCritical = isCritical;
+
         /**
          * Sequence number
          */

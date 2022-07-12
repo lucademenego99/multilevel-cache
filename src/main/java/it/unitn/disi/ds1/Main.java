@@ -35,26 +35,29 @@ public class Main {
         database.put(21, 99);   // DEBUG
         database.put(62, 88);   // DEBUG
 
+        // Log the database for later checks
+        Logger.logDatabase(database);
+
         // Set up the main architecture of the distributed cache system
         Architecture architecture = setupStructure(system, database);
-        Logger.INSTANCE.info(architecture.toString());
+        Logger.DEBUG.info(architecture.toString());
 
         try {
             Thread.sleep(500);
         } catch (Exception e) {
-            Logger.INSTANCE.severe(e.toString());
+            Logger.DEBUG.severe(e.toString());
         }
 
         /**
          * Test crash L2 before read
          */
-        // CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
-        // architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
+        CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
+        architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         /**
          * Test send some random read messages
          */
-        /*
+
         for(int i = 0; i < Config.N_ITERATIONS; i++) {
             // Read request for key 21
             for(int j = 0; j < Config.N_CLIENTS; j++) {
@@ -69,22 +72,27 @@ public class Main {
             try {
                 Thread.sleep(1000);
             } catch (Exception e) {
-                Logger.INSTANCE.severe(e.toString());
+                Logger.DEBUG.severe(e.toString());
             }
 
             architecture.clients.get(0).tell(new WriteMessage(21, i, new ArrayList<>(), null, false), ActorRef.noSender());
             try {
                 Thread.sleep(2000);
            } catch (Exception e) {
-                Logger.INSTANCE.severe(e.toString());
+                Logger.DEBUG.severe(e.toString());
             }
         }
-        */
+
+
+        /**
+         * Test simple write
+         */
+        // architecture.clients.get(0).tell(new WriteMessage(21, 99, new ArrayList<>(), null, false), ActorRef.noSender());
 
         /**
          * Test Critical Read
          */
-        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        // architecture.clients.get(1).tell(new ReadMessage(21, new ArrayList<>(), null, true, -1), ActorRef.noSender());
         // Sleep
         // try {
         //     Thread.sleep(3000);
@@ -97,31 +105,31 @@ public class Main {
          * Test Critical Write
          */
         // Perform a read
-        architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
-        architecture.clients.get(1).tell(new ReadMessage(62, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        // architecture.clients.get(1).tell(new ReadMessage(62, new ArrayList<>(), null, false, -1), ActorRef.noSender());
 
         // Sleep
         try {
             Thread.sleep(3000);
         } catch (Exception e) {
-            Logger.INSTANCE.severe(e.toString());
+            Logger.DEBUG.severe(e.toString());
         }
 
         // Perform the critical write
-        architecture.clients.get(0).tell(new WriteMessage(21, 6, new ArrayList<>(), null, true), ActorRef.noSender());
-        architecture.clients.get(1).tell(new WriteMessage(62, 2, new ArrayList<>(), null, true), ActorRef.noSender());
+        // architecture.clients.get(0).tell(new WriteMessage(21, 6, new ArrayList<>(), null, true), ActorRef.noSender());
+        // architecture.clients.get(1).tell(new WriteMessage(62, 2, new ArrayList<>(), null, true), ActorRef.noSender());
 
         // Start performing read requests with other clients on the same key
         // Someone should get null responses if the critical write operation hasn't completed yet
         for(int i = 0; i < Config.N_ITERATIONS; i++) {
             // Read request for key 21
             for(int j = 2; j < Config.N_CLIENTS; j++) {
-                architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+                // architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
             }
             try {
                 Thread.sleep(20);
             } catch (Exception e) {
-                Logger.INSTANCE.severe(e.toString());
+                Logger.DEBUG.severe(e.toString());
             }
         }
 
@@ -130,7 +138,7 @@ public class Main {
         try {
             Thread.sleep(3000);
         } catch (Exception e) {
-            Logger.INSTANCE.severe(e.toString());
+            Logger.DEBUG.severe(e.toString());
         }
 
         // Start distributed snapshot -> the cached values for key 21 should now contain 1
@@ -139,7 +147,7 @@ public class Main {
         try {
             Thread.sleep(1000);
         } catch (Exception e) {
-            Logger.INSTANCE.severe(e.toString());
+            Logger.DEBUG.severe(e.toString());
         }
 
         // Shutdown system
@@ -159,15 +167,15 @@ public class Main {
      */
     private static Architecture setupStructure(ActorSystem system, Map<Integer, Integer> db) {
         System.out.println("Creating tree structure...");
-        Logger.INSTANCE.info("Creating the tree structure...");
-        Logger.INSTANCE.info("Starting with "  + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
+        Logger.DEBUG.info("Creating the tree structure...");
+        Logger.DEBUG.info("Starting with "  + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
                 Config.N_L2 + " associated caches each");
 
         // ids
-        int id = 0;
+        int id = -1;
 
         // Create the database
-        ActorRef database = system.actorOf(Database.props(id++, db), "database");
+        ActorRef database = system.actorOf(Database.props(++id, db), "database-" + id);
 
         // Initialize a new Cache Tree
         DistributedCacheTree cacheTree = new DistributedCacheTree(database);
@@ -178,7 +186,7 @@ public class Main {
 
         // Create N_L1 cache servers
         for (int i = 0; i < Config.N_L1; i++) {
-            l1Caches.add(system.actorOf(Cache.props(id++, database, database), "l1-cache-" + i));
+            l1Caches.add(system.actorOf(Cache.props(++id, database, database), "l1-cache-" + i + "-" + id));
         }
         cacheTree.database.putAll(l1Caches);
 
@@ -187,7 +195,7 @@ public class Main {
             List<ActorRef> l2CachesTmp = new ArrayList<>();
             for (int j = 0; j < Config.N_L2; j++) {
                 // Create the L2 cache server
-                ActorRef newL2 = system.actorOf(Cache.props(id++, l1Caches.get(i), database), "l2-cache-" + i + "-" + j);
+                ActorRef newL2 = system.actorOf(Cache.props(++id, l1Caches.get(i), database), "l2-cache-" + i + "-" + j + "-" + id);
                 l2CachesTmp.add(newL2);
                 cacheTree.database.children.get(i).put(newL2);
             }
@@ -206,14 +214,14 @@ public class Main {
         // Create N_CLIENTS clients
         List<ActorRef> clients = new ArrayList<>();
         for (int k = 0; k < Config.N_CLIENTS; k++) {
-            clients.add(system.actorOf(Client.props(id++), "client-" + k));
+            clients.add(system.actorOf(Client.props(++id), "client-" + k + "-" + id));
 
             // Send the L2 cache servers to the generated client
             JoinCachesMessage cachesMsg = new JoinCachesMessage(l2Caches);
             clients.get(k).tell(cachesMsg, ActorRef.noSender());
         }
 
-        Logger.INSTANCE.info("Tree structure created");
+        Logger.DEBUG.info("Tree structure created");
 
         return new Architecture(cacheTree, clients);
     }

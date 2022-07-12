@@ -87,7 +87,37 @@ public abstract class Actor extends AbstractActor {
     }
 
     /**
-     * Multicast method
+     * Multicast method logging the event for future consistency checks
+     * Just multicast one serializable message to a set of nodes
+     * The messages sent in multicast simulate a network delay which is configurable in the Config file
+     * @param msg message to be sent
+     * @param multicastGroup group to whom send the message
+     * @param key key linked with the given message
+     * @param value value linked with the given message
+     * @param seqno sequence number linked with the given message
+     * @param isCritical is the message critical?
+     */
+    protected void multicastAndCheck(Message msg, List<ActorRef> multicastGroup, Config.RequestType requestType, Integer key, Integer value, Integer seqno, boolean isCritical, UUID queryID) {
+        for (ActorRef p: multicastGroup) {
+            if (!p.equals(getSelf())) {
+                Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
+                                p.path().name()), requestType,
+                        true, key, value, seqno, "Multicast for key [CRIT: " + isCritical + "]", queryID
+                );
+
+                p.tell(msg, getSelf());
+
+                // TODO: a crash could be possible here
+
+                // simulate network delays using sleep
+                try { Thread.sleep(Config.RANDOM.nextInt(Config.NETWORK_DELAY_MS)); }
+                catch (InterruptedException e) { e.printStackTrace(); }
+            }
+        }
+    }
+
+    /**
+     * Basic Multicast method
      * Just multicast one serializable message to a set of nodes
      * The messages sent in multicast simulate a network delay which is configurable in the Config file
      * @param msg message to be sent
@@ -256,11 +286,13 @@ public abstract class Actor extends AbstractActor {
     protected void cancelTimer(UUID timerRequest){
         Logger.DEBUG.info(getSelf().path().name() + " is cancelling a timeout");
 
+        // TODO: we can remove this, right?
         Logger.DEBUG.severe("Timer size: " + this.timeoutScheduler.size());
 
         // Cancel the timer
         Cancellable timer = this.timeoutScheduler.get(timerRequest);
-        timer.cancel();
+        if (timer != null)
+            timer.cancel();
 
         // Remove the timer from the HashMap
         this.timeoutScheduler.remove(timerRequest);
@@ -325,6 +357,6 @@ public abstract class Actor extends AbstractActor {
      * @return Integer
      */
     public Integer getIdFromName(String name){
-        return new Integer(name.substring(name.lastIndexOf("-") + 1));
+        return Integer.valueOf(name.substring(name.lastIndexOf("-") + 1));
     }
 }
