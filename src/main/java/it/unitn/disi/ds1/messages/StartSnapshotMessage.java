@@ -3,4 +3,5 @@ package it.unitn.disi.ds1.messages;
 /**
  * Start snapshot message
  */
-public class StartSnapshotMessage extends Message {};
+public class StartSnapshotMessage extends Message {
+};

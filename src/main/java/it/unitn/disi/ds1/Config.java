@@ -4,10 +4,10 @@ import java.util.Random;
 
 /**
  * General configuration class
- *
+ * <p>
  * Here there will be listed all the configuration which can be employed for the
  * program
- *
+ * <p>
  * TODO, would a YAML file be better?
  */
 public class Config {
@@ -62,7 +62,7 @@ public class Config {
     public final static int CRIT_WRITE_TIME_OUT = 800;
 
     /**
- * Number of iterations
+     * Number of iterations
      */
     public final static int N_ITERATIONS = 5;
 

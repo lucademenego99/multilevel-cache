@@ -25,7 +25,8 @@ public class DistributedCacheNode {
 
     /**
      * Constructor of the distributed cache
-     * @param actor reference actor
+     *
+     * @param actor  reference actor
      * @param parent parent reference
      */
     public DistributedCacheNode(ActorRef actor, DistributedCacheNode parent) {
@@ -36,6 +37,7 @@ public class DistributedCacheNode {
 
     /**
      * Insert a children {@link it.unitn.disi.ds1.actors.Cache cache}
+     *
      * @param newActor actor reference of the cache to add
      */
     public void put(ActorRef newActor) {
@@ -45,6 +47,7 @@ public class DistributedCacheNode {
 
     /**
      * Insert a list of children {@link it.unitn.disi.ds1.actors.Cache caches}
+     *
      * @param newActors actor reference list to add
      */
     public void putAll(List<ActorRef> newActors) {
@@ -57,6 +60,7 @@ public class DistributedCacheNode {
 
     /**
      * To String method of the Cached node
+     *
      * @param depth depth of the node to print
      * @return node to string
      */
@@ -68,7 +72,7 @@ public class DistributedCacheNode {
                 for (int i = 0; i < depth; i++) {
                     res.append("\t");
                 }
-                res.append(child.toString(depth+1));
+                res.append(child.toString(depth + 1));
             }
         }
         return res.toString();

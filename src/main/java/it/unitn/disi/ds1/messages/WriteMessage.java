@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /**
  * Write message
- *
+ * <p>
  * The request is forwarded to the database, that applies the write and sends the notification of
  * the update to all its L1 caches. In turn, all L1 caches propagate it to their connected L2 caches. In this
  * way, the update is potentially applied at all caches, which is necessary for eventual consistency. Note that
@@ -42,11 +42,12 @@ public class WriteMessage extends Message {
 
     /**
      * Constructor of the message
-     * @param requestKey key of the requested item
+     *
+     * @param requestKey    key of the requested item
      * @param modifiedValue value to be modified
-     * @param hops list of hops the message has traveled
-     * @param uuid unique identifier of the transaction
-     * @param isCritical whether it is critical
+     * @param hops          list of hops the message has traveled
+     * @param uuid          unique identifier of the transaction
+     * @param isCritical    whether it is critical
      */
     public WriteMessage(int requestKey, int modifiedValue, List<ActorRef> hops, UUID uuid, boolean isCritical) {
         this.requestKey = requestKey;

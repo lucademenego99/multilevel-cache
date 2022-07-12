@@ -6,7 +6,10 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
 
 
 class VerySimpleFormatter extends Formatter {
@@ -25,12 +28,11 @@ class VerySimpleFormatter extends Formatter {
  * Logger class
  */
 public class Logger {
+    public final static java.util.logging.Logger DEBUG = java.util.logging.Logger.getLogger(Main.class.getName());
     /**
      * Logger instance {@link java.util.logging.Logger logger}
      */
     private final static java.util.logging.Logger CHECK = java.util.logging.Logger.getLogger("check-solution-logger");
-
-    public final static java.util.logging.Logger DEBUG = java.util.logging.Logger.getLogger(Main.class.getName());
 
     /**
      * Init logger function
@@ -54,18 +56,29 @@ public class Logger {
 
     /**
      * Log values according to a tab-separated value format
-     * @param logLevel level of the log
+     *
+     * @param logLevel           level of the log
      * @param requesterProcessId id of the process which performed the request
-     * @param receiverProcessId id of the process which has received the request
-     * @param requestType type of the request
-     * @param isResponse whether it is a response or not
-     * @param key key of the message
-     * @param value value of the message
-     * @param seqNo sequence number of the data
-     * @param message message additional
+     * @param receiverProcessId  id of the process which has received the request
+     * @param requestType        type of the request
+     * @param isResponse         whether it is a response or not
+     * @param key                key of the message
+     * @param value              value of the message
+     * @param seqNo              sequence number of the data
+     * @param message            message additional
      */
-    public static void logCheck(Level logLevel, Integer requesterProcessId, Integer receiverProcessId, Config.RequestType requestType,
-                           Boolean isResponse, Integer key, Integer value, Integer seqNo, String message, UUID queryID){
+    public static void logCheck(
+            Level logLevel,
+            Integer requesterProcessId,
+            Integer receiverProcessId,
+            Config.RequestType requestType,
+            Boolean isResponse,
+            Integer key,
+            Integer value,
+            Integer seqNo,
+            String message,
+            UUID queryID
+    ) {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
         String logMessage = MessageFormat.format("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}",
                 logLevel, timeStamp, requesterProcessId, receiverProcessId,
@@ -77,7 +90,7 @@ public class Logger {
 
     public static void logDatabase(Map<Integer, Integer> database) {
         StringBuilder keyValuePairs = new StringBuilder();
-        for (Map.Entry<Integer,Integer> entry : database.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : database.entrySet()) {
             keyValuePairs.append("\t").append(entry.getKey()).append("-").append(entry.getValue());
         }
         Logger.CHECK.log(Level.CONFIG, keyValuePairs.toString());

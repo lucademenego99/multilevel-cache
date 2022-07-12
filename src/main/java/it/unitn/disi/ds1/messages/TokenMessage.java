@@ -11,7 +11,10 @@ public class TokenMessage extends Message {
 
     /**
      * Token Message constructor
+     *
      * @param snapId snapshot identifier
      */
-    public TokenMessage(int snapId){ this.snapId = snapId; }
+    public TokenMessage(int snapId) {
+        this.snapId = snapId;
+    }
 }

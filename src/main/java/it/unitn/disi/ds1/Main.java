@@ -10,10 +10,10 @@ import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
 
 /***
  * Main class of the project
@@ -58,14 +58,16 @@ public class Main {
          * Test send some random read messages
          */
 
-        for(int i = 0; i < Config.N_ITERATIONS; i++) {
+        for (int i = 0; i < Config.N_ITERATIONS; i++) {
             // Read request for key 21
-            for(int j = 0; j < Config.N_CLIENTS; j++) {
+            for (int j = 0; j < Config.N_CLIENTS; j++) {
                 int requestKey = (int) database.keySet().toArray()[Config.RANDOM.nextInt(database.keySet().toArray().length)];
                 if (j == 0) {
-                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null,
+                            false, -1), ActorRef.noSender());
                 } else {
-                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null,
+                            false, -1), ActorRef.noSender());
                 }
             }
 
@@ -75,10 +77,13 @@ public class Main {
                 Logger.DEBUG.severe(e.toString());
             }
 
-            architecture.clients.get(0).tell(new WriteMessage(21, i, new ArrayList<>(), null, false), ActorRef.noSender());
+            architecture.clients.get(0).tell(
+                    new WriteMessage(21, i, new ArrayList<>(), null, false),
+                    ActorRef.noSender()
+            );
             try {
                 Thread.sleep(2000);
-           } catch (Exception e) {
+            } catch (Exception e) {
                 Logger.DEBUG.severe(e.toString());
             }
         }
@@ -121,9 +126,9 @@ public class Main {
 
         // Start performing read requests with other clients on the same key
         // Someone should get null responses if the critical write operation hasn't completed yet
-        for(int i = 0; i < Config.N_ITERATIONS; i++) {
+        for (int i = 0; i < Config.N_ITERATIONS; i++) {
             // Read request for key 21
-            for(int j = 2; j < Config.N_CLIENTS; j++) {
+            for (int j = 2; j < Config.N_CLIENTS; j++) {
                 // architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
             }
             try {
@@ -162,13 +167,13 @@ public class Main {
      * - clients performing requests to L2 caches
      *
      * @param system The actor system in use
-     * @param db The database containing some initial values
+     * @param db     The database containing some initial values
      * @return A tree representing the complete architecture of the system
      */
     private static Architecture setupStructure(ActorSystem system, Map<Integer, Integer> db) {
         System.out.println("Creating tree structure...");
         Logger.DEBUG.info("Creating the tree structure...");
-        Logger.DEBUG.info("Starting with "  + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
+        Logger.DEBUG.info("Starting with " + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
                 Config.N_L2 + " associated caches each");
 
         // ids
@@ -195,7 +200,8 @@ public class Main {
             List<ActorRef> l2CachesTmp = new ArrayList<>();
             for (int j = 0; j < Config.N_L2; j++) {
                 // Create the L2 cache server
-                ActorRef newL2 = system.actorOf(Cache.props(++id, l1Caches.get(i), database), "l2-cache-" + i + "-" + j + "-" + id);
+                ActorRef newL2 = system.actorOf(Cache.props(++id, l1Caches.get(i), database),
+                        "l2-cache-" + i + "-" + j + "-" + id);
                 l2CachesTmp.add(newL2);
                 cacheTree.database.children.get(i).put(newL2);
             }
@@ -228,12 +234,13 @@ public class Main {
 
     /**
      * Initialize the database with random values
+     *
      * @return The initialized database as a HashMap
      */
     private static Map<Integer, Integer> initializeDatabase() {
         Map<Integer, Integer> db = new HashMap<>();
         for (int i = 0; i < 100; i++) {
-            db.put(i, (int)(Math.random() * (100)));
+            db.put(i, (int) (Math.random() * (100)));
         }
         return db;
     }
@@ -242,8 +249,8 @@ public class Main {
         try {
             System.out.println(">>> Press ENTER to continue <<<");
             System.in.read();
+        } catch (IOException ignored) {
         }
-        catch (IOException ignored) {}
     }
 
     /**

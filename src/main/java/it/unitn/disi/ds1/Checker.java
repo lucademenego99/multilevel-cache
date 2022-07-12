@@ -10,11 +10,11 @@ import java.util.UUID;
 
 /**
  * Checker class
- *
+ * <p>
  * This class checks the log file 'logs.txt' verifying whether in the last run
  * the program behaved correctly without any inconsistencies with respect to the
  * project requirements
- *
+ * <p>
  * TODO: we have to recreate the structure of db+L1+L2. Every entity will have its own state that
  *       we need to keep track of. We should add to the logs file the number of L1 and L2 caches
  *       to recreate the architecture.
@@ -33,6 +33,7 @@ public class Checker {
 
     /**
      * Check if the log file 'logs.txt' represents a consistent run
+     *
      * @return True if the run is consistent, False otherwise
      */
     public static boolean check() {
@@ -97,7 +98,7 @@ public class Checker {
                         }
                     }
                 }
-                count ++;
+                count++;
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -108,6 +109,7 @@ public class Checker {
 
     /**
      * Process the database from the log file
+     *
      * @param line String containing the database information
      * @return A map modelling the database as a key-value map of integers
      */
@@ -118,8 +120,8 @@ public class Checker {
 
         // For i=0, we only have the log level - we don't need it, so we start from 1
         for (int i = 1; i < parts.length; i++) {
-               String[] keyValuePair = parts[i].split("-");
-               database.put(Integer.parseInt(keyValuePair[0]), Integer.parseInt(keyValuePair[1]));
+            String[] keyValuePair = parts[i].split("-");
+            database.put(Integer.parseInt(keyValuePair[0]), Integer.parseInt(keyValuePair[1]));
         }
 
         return database;
@@ -128,7 +130,7 @@ public class Checker {
 
 /**
  * LogCheck Class
- *
+ * <p>
  * Class used to represent a specific log line, containing an event
  * happened during the run
  */
@@ -144,17 +146,28 @@ class LogCheck {
 
     /**
      * Standard constructor
-     * @param timestamp Timestamp of the log
-     * @param sender Sender Actor
-     * @param receiver Receiver Actor
+     *
+     * @param timestamp   Timestamp of the log
+     * @param sender      Sender Actor
+     * @param receiver    Receiver Actor
      * @param requestType Type of request associated with the event
-     * @param isResponse Is it a response or a request?
-     * @param key Key associated with the event
-     * @param value Value associated with the event
-     * @param seqno Sequence number associated with the event
-     * @param uuid Unique Identifier (UUID) associated with the event
+     * @param isResponse  Is it a response or a request?
+     * @param key         Key associated with the event
+     * @param value       Value associated with the event
+     * @param seqno       Sequence number associated with the event
+     * @param uuid        Unique Identifier (UUID) associated with the event
      */
-    LogCheck(String timestamp, Integer sender, Integer receiver, Config.RequestType requestType, boolean isResponse, Integer key, Integer value, Integer seqno, UUID uuid) {
+    LogCheck(
+            String timestamp,
+            Integer sender,
+            Integer receiver,
+            Config.RequestType requestType,
+            boolean isResponse,
+            Integer key,
+            Integer value,
+            Integer seqno,
+            UUID uuid
+    ) {
         this.timestamp = timestamp;
         this.sender = sender;
         this.receiver = receiver;
@@ -188,6 +201,7 @@ class LogCheck {
 
     /**
      * Check if the input string is parsable as an Integer
+     *
      * @param input Input to check
      * @return True if it's parsable, False otherwise
      */

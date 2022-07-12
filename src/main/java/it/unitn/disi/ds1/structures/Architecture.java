@@ -17,8 +17,9 @@ public class Architecture {
 
     /**
      * Constructor of the Architecture
+     *
      * @param cacheTree tree of caches
-     * @param clients list of clients
+     * @param clients   list of clients
      */
     public Architecture(DistributedCacheTree cacheTree, List<ActorRef> clients) {
         this.cacheTree = cacheTree;
@@ -27,6 +28,7 @@ public class Architecture {
 
     /**
      * Prints the architecture structure
+     *
      * @return architecture to string
      */
     @Override

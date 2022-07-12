@@ -17,6 +17,7 @@ public class JoinCachesMessage extends Message {
 
     /**
      * Constructor of the message
+     *
      * @param group The group of caches joining the architecture
      */
     public JoinCachesMessage(List<ActorRef> group) {

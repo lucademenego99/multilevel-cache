@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-public class CriticalWriteResponseMessage extends Message{
+public class CriticalWriteResponseMessage extends Message {
     public final Config.ACResponse finalDecision;
 
     /**

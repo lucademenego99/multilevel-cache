@@ -19,7 +19,8 @@ public class TimeoutMessage extends Message {
 
     /**
      * Timeout message constructor
-     * @param msg message we are waiting
+     *
+     * @param msg        message we are waiting
      * @param whoCrashed actor reference of who is crashed
      */
     public TimeoutMessage(Serializable msg, ActorRef whoCrashed) {

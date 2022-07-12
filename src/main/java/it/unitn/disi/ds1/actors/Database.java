@@ -11,14 +11,14 @@ import java.util.logging.Level;
 
 /**
  * Database actor
- *
+ * <p>
  * It stores inside a variable a key-value pairs HashSet
  * It communicates with L1 cache servers, handling the following requests:
  * - READ
  * - WRITE
  * - CRITREAD
  * - CRITWRITE
- *
+ * <p>
  * We can take for granted this actor doesn't crash
  */
 public class Database extends Actor {
@@ -30,7 +30,7 @@ public class Database extends Actor {
     /**
      * The database is stored inside this variable as
      * key-value integer pairs
-     *
+     * <p>
      * We can assume there's infinite space
      */
     private final Map<Integer, Integer> database;
@@ -53,7 +53,8 @@ public class Database extends Actor {
     /**
      * Database Constructor
      * Initialize variables
-     * @param id database identifier
+     *
+     * @param id       database identifier
      * @param database A Map containing the entries of our database
      */
     public Database(int id, Map<Integer, Integer> database) {
@@ -68,14 +69,10 @@ public class Database extends Actor {
         this.receivedAcksForCritWrite = new HashMap<>();
     }
 
-    @Override
-    public void preStart(){
-        // TODO schedule the things
-    }
-
     /**
      * Database static builder
-     * @param id database identifier
+     *
+     * @param id       database identifier
      * @param database database values
      * @return Database instance
      */
@@ -83,15 +80,22 @@ public class Database extends Actor {
         return Props.create(Database.class, () -> new Database(id, database));
     }
 
+    @Override
+    public void preStart() {
+        // TODO schedule the things
+    }
+
     /**
      * Handler of JoinCachesMessage message.
      * Add all the joined caches as target for queries
+     *
      * @param msg message containing information about the joined cache servers
      */
     @Override
     protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
-        Logger.DEBUG.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
+        Logger.DEBUG.info(getSelf().path().name() + ": joining a the distributed cache with " +
+                this.caches.size() + " visible peers with ID " + this.id);
     }
 
     /**
@@ -117,7 +121,7 @@ public class Database extends Actor {
         // TODO test whether the null message works
         Map<Integer, Integer> valueToReturn = Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey));
         // Value on CRITWRITE
-        if(criticalKeyValue.containsKey(msg.requestKey)){
+        if (criticalKeyValue.containsKey(msg.requestKey)) {
             // Logger.INSTANCE.severe(getSelf().path().name() + " cannot read a message which is on critical update " + msg.requestKey);
             valueToReturn = null;
         }
@@ -137,21 +141,27 @@ public class Database extends Actor {
         // Send the response back to the sender
         getSender().tell(responseMessage, getSelf());
 
-        Logger.logCheck(Level.FINE, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, true, msg.requestKey, valueToReturn == null ? null : this.database.get(msg.requestKey), seqno, "Response for key [CRIT: " + msg.isCritical + "]", msg.queryUUID);
-        Logger.DEBUG.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " + getSender().path().name() + " sequence number: " + seqno + " [CRITICAL] = " + msg.isCritical);
+        Logger.logCheck(Level.FINE, this.id, getIdFromName(getSender().path().name()),
+                msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ,
+                true, msg.requestKey, valueToReturn == null ? null : this.database.get(msg.requestKey),
+                seqno, "Response for key [CRIT: " + msg.isCritical + "]", msg.queryUUID
+        );
+        Logger.DEBUG.info(getSelf().path().name() + " is answering " + msg.requestKey + " to: " +
+                getSender().path().name() + " sequence number: " + seqno + " [CRITICAL] = " + msg.isCritical);
     }
 
     /**
      * Handler of the WriteMessage
      * The function overrides the element in the database
      * and sends the update to all the cache using multicast
+     *
      * @param msg
      */
     @Override
     protected void onWriteMessage(WriteMessage msg) {
         // Value on CRITWRITE
         // TODO
-        if(criticalKeyValue.containsKey(msg.requestKey)){
+        if (criticalKeyValue.containsKey(msg.requestKey)) {
             Logger.DEBUG.severe(getSelf().path().name() + " cannot write a message which is on critical update " + msg.requestKey);
             // Get the list of hops
             List<ActorRef> newHops = new ArrayList<>(msg.hops);
@@ -164,8 +174,15 @@ public class Database extends Actor {
             // Network delay
             this.delay();
             // Send the message
-            getSender().tell(new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.WRITE, msg.isCritical, seqno), getSelf());
-            Logger.logCheck(Level.INFO, this.id, getIdFromName(getSender().path().name()), msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE, true, msg.requestKey, null, seqno, "Write request for key [CRIT: " + msg.isCritical + "]", msg.queryUUID);
+            getSender().tell(
+                    new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.WRITE, msg.isCritical, seqno),
+                    getSelf()
+            );
+            Logger.logCheck(Level.INFO, this.id, getIdFromName(getSender().path().name()),
+                    msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE,
+                    true, msg.requestKey, null, seqno,
+                    "Write request for key [CRIT: " + msg.isCritical + "]", msg.queryUUID
+            );
             return;
         }
 
@@ -180,13 +197,22 @@ public class Database extends Actor {
         if (msg.isCritical) {
             this.criticalSessionKey.put(msg.queryUUID, msg.requestKey);
             this.criticalKeyValue.put(msg.requestKey, msg.modifiedValue);
-            Logger.DEBUG.info(getSelf().path().name() + " Sending the request for critical write to all the caches, hope to receive all OK! for " + msg.requestKey + " value: " + msg.modifiedValue);
+            Logger.DEBUG.info(getSelf().path().name() +
+                    " Sending the request for critical write to all the caches, hope to receive all OK! for " +
+                    msg.requestKey + " value: " + msg.modifiedValue
+            );
 
             // Send the critical update message to L1 caches - we expect an acknowledgement containing COMMIT/ABORT
-            this.multicast(new CriticalUpdateMessage(msg.requestKey, msg.modifiedValue, msg.queryUUID, newHops), this.caches);
+            this.multicast(
+                    new CriticalUpdateMessage(msg.requestKey, msg.modifiedValue, msg.queryUUID, newHops),
+                    this.caches
+            );
 
             // If the database doesn't receive an acknowledgement within a given timeout, abort the write and return error
-            this.scheduleTimer(new CriticalUpdateTimeoutMessage(msg.queryUUID, newHops), Config.CRIT_WRITE_TIME_OUT, msg.queryUUID);
+            this.scheduleTimer(
+                    new CriticalUpdateTimeoutMessage(msg.queryUUID, newHops),
+                    Config.CRIT_WRITE_TIME_OUT, msg.queryUUID
+            );
             return;
         }
 
@@ -202,14 +228,20 @@ public class Database extends Actor {
         this.seqnoCache.remove(msg.requestKey);
         this.seqnoCache.put(msg.requestKey, newSeqno);
 
-        Logger.DEBUG.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " + getSender().path().name() + " sequence number " + newSeqno);
+        Logger.DEBUG.info(getSelf().path().name() + ": forwarding the new value for " + msg.requestKey + " to: " +
+                getSender().path().name() + " sequence number " + newSeqno);
 
         // Multicast to the cache the update
-        this.multicastAndCheck(new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID, Config.RequestType.WRITE, false, newSeqno), this.caches, Config.RequestType.WRITE, msg.requestKey, msg.modifiedValue, newSeqno, false, msg.queryUUID);
+        this.multicastAndCheck(
+                new ResponseMessage(Collections.singletonMap(msg.requestKey, msg.modifiedValue), newHops, msg.queryUUID,
+                        Config.RequestType.WRITE, false, newSeqno), this.caches, Config.RequestType.WRITE,
+                msg.requestKey, msg.modifiedValue, newSeqno, false, msg.queryUUID
+        );
     }
 
     /**
      * On timeout abort if the request has not ended
+     *
      * @param msg
      */
     protected void onCriticalUpdateTimeoutMessage(CriticalUpdateTimeoutMessage msg) {
@@ -220,14 +252,17 @@ public class Database extends Actor {
          * To avoid that onTimeout messages are put in the queue right after the response
          * In this case we have already addressed the queries, therefore, the all the caches have answered
          */
-        if(!this.criticalSessionKey.containsKey(msg.queryUUID)){
+        if (!this.criticalSessionKey.containsKey(msg.queryUUID)) {
             return;
         }
         Integer key = this.criticalSessionKey.get(msg.queryUUID);
         Integer value = this.criticalKeyValue.get(key);
         Logger.DEBUG.info(getSelf().path().name() + " Aborting the critical write for " + key + " value " + value);
         // TODO: we will also need to send the response to the client, hence we need the usual hops etc
-        this.multicast(new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null), this.caches);
+        this.multicast(
+                new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null),
+                this.caches
+        );
     }
 
     /**
@@ -235,6 +270,7 @@ public class Database extends Actor {
      * CriticalUpdateResponseMessage -> Config.CUResponse.OK
      * If all agree -> commit, if someone does not -> ABORT
      * The Commit and Abort messages are CriticalWriteResponseMessage
+     *
      * @param msg
      */
     protected void onCriticalUpdateResponseMessage(CriticalUpdateResponseMessage msg) {
@@ -269,11 +305,18 @@ public class Database extends Actor {
 
                 // Clear critical writes value
                 this.clearCriticalWrite(msg.queryUUID);
-                
-                Logger.DEBUG.info(getSelf().path().name() + " Committing since all answers OK! the critical write for " + keyToUpdate + " value " + newValue);
-                
+
+                Logger.DEBUG.info(getSelf().path().name() +
+                        " Committing since all answers OK! the critical write for " + keyToUpdate + " value " +
+                        newValue
+                );
+
                 // Send commit to the caches with the new sequence number to be updated
-                this.multicastAndCheck(new CriticalWriteResponseMessage(Config.ACResponse.COMMIT, msg.queryUUID, msg.hops, newSeqno), this.caches, Config.RequestType.CRITWRITE, keyToUpdate, newValue, newSeqno, true, msg.queryUUID);
+                this.multicastAndCheck(
+                        new CriticalWriteResponseMessage(Config.ACResponse.COMMIT, msg.queryUUID, msg.hops, newSeqno),
+                        this.caches, Config.RequestType.CRITWRITE, keyToUpdate, newValue, newSeqno,
+                        true, msg.queryUUID
+                );
             }
         } else {
             // Got NO, I can abort
@@ -282,15 +325,19 @@ public class Database extends Actor {
             Integer value = this.criticalKeyValue.get(key);
             Logger.DEBUG.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " + key + " value " + value);
             // TODO: we will also need to send the response to the client, hence we need the usual hops etc
-            this.multicastAndCheck(new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null), this.caches, Config.RequestType.CRITWRITE, key, null, -1, true, msg.queryUUID);
+            this.multicastAndCheck(
+                    new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null),
+                    this.caches, Config.RequestType.CRITWRITE, key, null, -1, true, msg.queryUUID
+            );
         }
     }
 
     /**
      * Clear for critical write
+     *
      * @param requestId id of the request
      */
-    private void clearCriticalWrite(UUID requestId){
+    private void clearCriticalWrite(UUID requestId) {
         Integer oldKey = this.criticalSessionKey.get(requestId);
         // Empty
         this.criticalSessionKey.remove(requestId);
@@ -299,21 +346,31 @@ public class Database extends Actor {
     }
 
     @Override
-    protected void onResponseMessage(ResponseMessage msg){};
+    protected void onResponseMessage(ResponseMessage msg) {
+    }
+
+    ;
 
     @Override
-    protected void onTimeoutMessage(TimeoutMessage msg){};
+    protected void onTimeoutMessage(TimeoutMessage msg) {
+    }
+
+    ;
 
     /**
      * Handler of the Recovery message
+     *
      * @param msg recovery message
      */
     @Override
-    protected void onRecoveryMessage(RecoveryMessage msg){};
+    protected void onRecoveryMessage(RecoveryMessage msg) {
+    }
+
+    ;
 
     /**
      * Handler of the messages
-     *
+     * <p>
      * It handles:
      * {@link JoinCachesMessage join message}
      * {@link TokenMessage token message} for distributed snapshot

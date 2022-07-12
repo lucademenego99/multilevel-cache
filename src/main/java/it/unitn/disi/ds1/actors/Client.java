@@ -14,12 +14,12 @@ import java.util.logging.Level;
 
 /**
  * Client actor
- *
+ * <p>
  * It performs READ, WRITE, CRITREAD, CRITWRITE requests to L2 cache servers
- *
+ * <p>
  * If the L2 cache server crashes and/or the client doesn't receive a response within a given timeout,
  * it will ask the same thing to another L2 cache server
- *
+ * <p>
  * We can safely assume a client won't perform concurrent requests
  */
 public class Client extends Actor {
@@ -50,6 +50,7 @@ public class Client extends Actor {
 
     /**
      * Client static builder
+     *
      * @param id identifier of the client
      * @return Client instance
      */
@@ -60,16 +61,19 @@ public class Client extends Actor {
     /**
      * Handler of JoinCachesMessage message.
      * Add all the joined caches as target for queries
+     *
      * @param msg message containing information about the joined cache servers
      */
     @Override
     protected void onJoinCachesMessage(JoinCachesMessage msg) {
         this.caches.addAll(msg.caches);
-        Logger.DEBUG.info(getSelf().path().name() + ": joining a the distributed cache with " + this.caches.size() + " visible peers with ID " + this.id);
+        Logger.DEBUG.info(getSelf().path().name() + ": joining a the distributed cache with " +
+                this.caches.size() + " visible peers with ID " + this.id);
     }
 
     /**
      * Sends a new read message request to the cache
+     *
      * @param msg Message containing the key to ask for
      */
     @Override
@@ -91,15 +95,17 @@ public class Client extends Actor {
         this.requestUUID = UUID.randomUUID();
 
         // Put the seqNo inside the request
-        ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()), requestUUID, msg.isCritical, seqNo.intValue());
+        ReadMessage newRequest = new ReadMessage(msg.requestKey, Collections.singletonList(getSelf()), requestUUID,
+                msg.isCritical, seqNo.intValue());
 
         // Take a random client to send the request
-        int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
+        int cacheToAskTo = (int) (Math.random() * (this.caches.size()));
 
-        Logger.DEBUG.info(getSelf().path().name() + " is sending read request for key " + msg.requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
-        Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
-                this.caches.get(cacheToAskTo).path().name()), msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ,
-                false, msg.requestKey, null, seqNo.intValue(), "Request read for key [CRIT: " + msg.isCritical + "]", requestUUID
+        Logger.DEBUG.info(getSelf().path().name() + " is sending read request for key " + msg.requestKey + " to " +
+                this.caches.get(cacheToAskTo).path().name());
+        Logger.logCheck(Level.FINE, this.id, this.getIdFromName(this.caches.get(cacheToAskTo).path().name()),
+                msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, false, msg.requestKey,
+                null, seqNo.intValue(), "Request read for key [CRIT: " + msg.isCritical + "]", requestUUID
         );
 
         // Network delay
@@ -113,6 +119,7 @@ public class Client extends Actor {
 
     /**
      * Sends a write message to a given cache
+     *
      * @param msg on write message
      */
     @Override
@@ -127,14 +134,17 @@ public class Client extends Actor {
         this.requestUUID = UUID.randomUUID();
 
         // Generate the new request message
-        WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue, Collections.singletonList(getSelf()), requestUUID, msg.isCritical);
+        WriteMessage newRequest = new WriteMessage(msg.requestKey, msg.modifiedValue,
+                Collections.singletonList(getSelf()), requestUUID, msg.isCritical);
         // Selects a new cache to ask to
-        int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
+        int cacheToAskTo = (int) (Math.random() * (this.caches.size()));
 
-        Logger.DEBUG.info(getSelf().path().name() + " is sending write request for key " + msg.requestKey + " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
-        Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
-                this.caches.get(cacheToAskTo).path().name()), msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE,
-                false, msg.requestKey, msg.modifiedValue, null, "Request write for key [CRIT: " + msg.isCritical + "]", requestUUID
+        Logger.DEBUG.info(getSelf().path().name() + " is sending write request for key " + msg.requestKey +
+                " and value " + msg.modifiedValue + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.logCheck(Level.FINE, this.id, this.getIdFromName(this.caches.get(cacheToAskTo).path().name()),
+                msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE, false,
+                msg.requestKey, msg.modifiedValue, null,
+                "Request write for key [CRIT: " + msg.isCritical + "]", requestUUID
         );
 
         // Network delay
@@ -143,16 +153,19 @@ public class Client extends Actor {
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
 
         // Schedule the timer for a possible timeout
-        this.scheduleTimer(new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
+        this.scheduleTimer(
+                new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID
+        );
     }
 
     /**
      * When a timeout has been received:
      * it is expected that the client forward the request to a new client
+     *
      * @param msg timeout message
      */
     @Override
-    protected void onTimeoutMessage(TimeoutMessage msg){
+    protected void onTimeoutMessage(TimeoutMessage msg) {
         // If the response has never arrived
         if (!this.shouldReceiveResponse)
             return;
@@ -164,7 +177,7 @@ public class Client extends Actor {
         this.requestUUID = UUID.randomUUID();
 
         // Ask to another cache the same thing asked before
-        int cacheToAskTo = (int)(Math.random() * (this.caches.size()));
+        int cacheToAskTo = (int) (Math.random() * (this.caches.size()));
 
         // Tell to another cache
         int requestKey = -1, modifiedValue = -1;
@@ -174,26 +187,29 @@ public class Client extends Actor {
         Config.RequestType reqType = Config.RequestType.READ;
         boolean critical = false;
         // Recreate the message which should be sent to a new cache
-        if (msg.msg instanceof ReadMessage){
-            requestKey = ((ReadMessage)(msg.msg)).requestKey;
-            newSeqno = ((ReadMessage)(msg.msg)).seqno;
+        if (msg.msg instanceof ReadMessage) {
+            requestKey = ((ReadMessage) (msg.msg)).requestKey;
+            newSeqno = ((ReadMessage) (msg.msg)).seqno;
             newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), requestUUID, ((ReadMessage) msg.msg).isCritical, newSeqno);
             critical = ((ReadMessage) msg.msg).isCritical;
             reqType = critical ? Config.RequestType.CRITREAD : Config.RequestType.READ;
             type = "read [CRITICAL] = " + critical + " [seqno] = " + newSeqno;
         } else if (msg.msg instanceof WriteMessage) {
-            requestKey = ((WriteMessage)(msg.msg)).requestKey;
-            modifiedValue = ((WriteMessage)(msg.msg)).modifiedValue;
+            requestKey = ((WriteMessage) (msg.msg)).requestKey;
+            modifiedValue = ((WriteMessage) (msg.msg)).modifiedValue;
             critical = ((WriteMessage) (msg.msg)).isCritical;
             reqType = critical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE;
             newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), requestUUID, critical);
             type = "write";
         }
 
-        Logger.DEBUG.info(getSelf().path().name() + " is sending a " + type + " request to another cache for key " + requestKey + " to " + this.caches.get(cacheToAskTo).path().name());
+        Logger.DEBUG.info(getSelf().path().name() + " is sending a " + type +
+                " request to another cache for key " + requestKey + " to " +
+                this.caches.get(cacheToAskTo).path().name());
         Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
                         this.caches.get(cacheToAskTo).path().name()), reqType,
-                false, requestKey, modifiedValue, newSeqno, "Request to another cache for key [CRIT: " + critical + "]", requestUUID
+                false, requestKey, modifiedValue, newSeqno,
+                "Request to another cache for key [CRIT: " + critical + "]", requestUUID
         );
 
         // Network delay
@@ -209,24 +225,29 @@ public class Client extends Actor {
 
     /**
      * Handler of the Recovery message
+     *
      * @param msg recovery message
      */
     @Override
-    protected void onRecoveryMessage(RecoveryMessage msg){}
+    protected void onRecoveryMessage(RecoveryMessage msg) {
+    }
 
     /**
      * Handler of the ResponseMessage
      * Print on the console the final result
+     *
      * @param msg message containing the final response
      */
     @Override
-    protected void onResponseMessage(ResponseMessage msg){
+    protected void onResponseMessage(ResponseMessage msg) {
         // Cancel eventual timeout timer
         this.cancelTimer(this.requestUUID);
         this.shouldReceiveResponse = false;
 
-        if(msg.values != null){
-            Logger.DEBUG.warning("Operation " + msg.requestType + " completed successful got " + msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] + " sequence number:" + msg.seqno);
+        if (msg.values != null) {
+            Logger.DEBUG.warning("Operation " + msg.requestType + " completed successful got " +
+                    msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] +
+                    " sequence number:" + msg.seqno);
 
             int requestKey = (Integer) msg.values.keySet().toArray()[0];
             // Override the value in the sequence number cache
@@ -236,7 +257,7 @@ public class Client extends Actor {
             //                getSender().path().name()), msg.requestType,
             //        true, requestKey, (Integer) msg.values.values().toArray()[0], msg.seqno, "Response"
             //);
-        }else{
+        } else {
             // If the L1 cache crashed, the L2 cache became L1, so we remove it from the caches the client can communicate with
             if (msg.requestType == Config.RequestType.READ) {
                 Logger.DEBUG.warning("Read operation failed");

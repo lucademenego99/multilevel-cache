@@ -13,7 +13,7 @@ import java.util.*;
 public class ResponseMessage extends Message {
     /**
      * Map of value passed
-     *
+     * <p>
      * **NOTE**
      * Integers in Java are immutable, otherwise we would have used
      * other message passing methods
@@ -48,11 +48,12 @@ public class ResponseMessage extends Message {
 
     /**
      * Constructor of the response message
-     * @param values values in the reply
-     * @param hops hops which needs to be traversed to deliver the message
-     * @param uuid unique identifier of the request
+     *
+     * @param values      values in the reply
+     * @param hops        hops which needs to be traversed to deliver the message
+     * @param uuid        unique identifier of the request
      * @param requestType type of request
-     * @param seqno sequence number
+     * @param seqno       sequence number
      */
     public ResponseMessage(Map<Integer, Integer> values, List<ActorRef> hops, UUID uuid, Config.RequestType requestType, boolean isCritical, int seqno) {
         this.isCritical = isCritical;
@@ -65,7 +66,7 @@ public class ResponseMessage extends Message {
         /**
          * **NOTE:** the response message contains null if there were failures
          */
-        if(values != null)
+        if (values != null)
             this.values = Collections.unmodifiableMap(new HashMap<>(values));
         else
             this.values = null;
