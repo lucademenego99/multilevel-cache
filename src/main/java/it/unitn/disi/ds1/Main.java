@@ -30,6 +30,9 @@ public class Main {
         // Initialize the Logger
         Logger.initLogger();
 
+        // Log the architecture configuration
+        Logger.logConfig(Config.N_L1, Config.N_L2, Config.N_CLIENTS);
+
         // Create a database initialized with random values
         Map<Integer, Integer> database = initializeDatabase();
         database.put(21, 99);   // DEBUG
@@ -51,13 +54,13 @@ public class Main {
         /**
          * Test crash L2 before read
          */
-        CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
-        architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
+        // CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
+        // architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         /**
          * Test send some random read messages
          */
-
+        /*
         for (int i = 0; i < Config.N_ITERATIONS; i++) {
             // Read request for key 21
             for (int j = 0; j < Config.N_CLIENTS; j++) {
@@ -87,6 +90,7 @@ public class Main {
                 Logger.DEBUG.severe(e.toString());
             }
         }
+        */
 
 
         /**
@@ -122,6 +126,12 @@ public class Main {
 
         // Perform the critical write
         // architecture.clients.get(0).tell(new WriteMessage(21, 6, new ArrayList<>(), null, true), ActorRef.noSender());
+        try {
+            Thread.sleep(50);
+        } catch (Exception e) {
+            Logger.DEBUG.severe(e.toString());
+        }
+        // architecture.clients.get(3).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
         // architecture.clients.get(1).tell(new WriteMessage(62, 2, new ArrayList<>(), null, true), ActorRef.noSender());
 
         // Start performing read requests with other clients on the same key

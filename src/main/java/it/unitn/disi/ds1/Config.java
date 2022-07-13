@@ -100,7 +100,8 @@ public class Config {
         READ,
         WRITE,
         CRITREAD,
-        CRITWRITE
+        CRITWRITE,
+        FLUSH
     }
 
     public enum ACResponse {

@@ -120,6 +120,8 @@ public class Cache extends Actor {
      * Method which clear the cache
      */
     private void clearCache() {
+        Logger.logCheck(Level.FINE, this.id, this.id, Config.RequestType.FLUSH, true,
+                null, null, null, "Crash", null);
         this.cachedDatabase.clear();
         this.seqnoCache.clear();
         this.criticalKeyValue.clear();

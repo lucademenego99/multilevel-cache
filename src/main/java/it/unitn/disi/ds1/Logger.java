@@ -88,6 +88,10 @@ public class Logger {
         Logger.CHECK.log(logLevel, logMessage);
     }
 
+    public static void logConfig(int countL1, int countL2, int countClients) {
+        Logger.CHECK.log(Level.CONFIG, MessageFormat.format("\t{0}\t{1}\t{2}", countL1, countL2, countClients));
+    }
+
     public static void logDatabase(Map<Integer, Integer> database) {
         StringBuilder keyValuePairs = new StringBuilder();
         for (Map.Entry<Integer, Integer> entry : database.entrySet()) {

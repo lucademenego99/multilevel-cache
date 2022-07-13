@@ -3,10 +3,7 @@ package it.unitn.disi.ds1;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Checker class
@@ -15,9 +12,6 @@ import java.util.UUID;
  * the program behaved correctly without any inconsistencies with respect to the
  * project requirements
  * <p>
- * TODO: we have to recreate the structure of db+L1+L2. Every entity will have its own state that
- *       we need to keep track of. We should add to the logs file the number of L1 and L2 caches
- *       to recreate the architecture.
  */
 public class Checker {
 
@@ -40,6 +34,22 @@ public class Checker {
         // Database created during the run
         Map<Integer, Integer> database = null;
 
+        // Information about the architecture
+        int countL1, countL2, countClients;
+
+        // State of all caches
+        Map<Integer, Map<Integer, Integer>> cachesState = new HashMap<>();
+
+        // Remember which L1 is the parent for each L2
+        Map<Integer, Integer> parentOf = new HashMap<>();
+
+        // Remember which CRITWRITE are currently being handled by the database
+        Set<Integer> handledCritWrites = new HashSet<>();
+
+        // Remember if we are expecting some errors due to CRITWRITES for some requests
+        Set<UUID> errorsDueToCritWrites = new HashSet<>();
+
+        // All requests
         Map<UUID, LogCheck> requests = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader("logs.txt"))) {
@@ -47,53 +57,138 @@ public class Checker {
             String line;
             while ((line = br.readLine()) != null) {
                 if (count == 0) {
-                    // The first line contains the database's values: process it
+                    // The first line contains information about the architecture: process it
+                    String[] parts = line.split("\t");
+                    countL1 = Integer.parseInt(parts[1]);
+                    countL2 = Integer.parseInt(parts[2]);
+                    countClients = Integer.parseInt(parts[3]);
+
+                    // Initialize the system's state based on the received information
+                    // Keep a counter to give a unique ID to each entity
+                    int counterID = 0;
+                    // L1s
+                    for (int i = 0; i < countL1; i++) {
+                        cachesState.put(++counterID, new HashMap<>());
+                    }
+                    // For each L1, create the L2s
+                    for (int i = 0; i < countL1; i++) {
+                        for (int j = 0; j < countL2; j++) {
+                            parentOf.put(++counterID, i + 1);
+                            cachesState.put(counterID, new HashMap<>());
+                        }
+                    }
+                } else if (count == 1) {
+                    // The second line contains the database's values: process it
                     database = processDatabase(line);
                 } else {
+                    assert database != null;
                     // All the other lines contain details about the run
                     LogCheck logCheck = new LogCheck(line);
-                    if (!logCheck.isResponse) {
-                        // If it's a request, store it in a map where the key is the request's UUID
-                        requests.put(logCheck.uuid, logCheck);
+                    if (logCheck.requestType == Config.RequestType.FLUSH) {
+                        // If a cache crashed, clear the values it contained
+                        cachesState.get(logCheck.sender).clear();
                     } else {
-                        // We are dealing with a response, so we need to check that everything is consistent
+                        if (!logCheck.isResponse) {
+                            // If it's a request, store it in a map where the key is the request's UUID
+                            if (!requests.containsKey(logCheck.uuid)) {
+                                requests.put(logCheck.uuid, logCheck);
+                            }
 
-                        // Get the original request
-                        LogCheck original = requests.get(logCheck.uuid);
+                            // If there is already a CRITWRITE on this key
+                            if (handledCritWrites.contains(logCheck.key)) {
+                                System.out.println("There should be an error due to a CRITWRITE being handled for key " + logCheck.key);
+                                errorsDueToCritWrites.add(logCheck.uuid);
+                            }
 
-                        if (Objects.equals(logCheck.receiver, original.sender)) {
-                            // If the response is for the final client who performed the request
-                            if (logCheck.value == null) {
-                                // There was an error
-                                // Nothing to do here?
-                            } else {
-                                // No error - check everything is consistent
-                                switch (original.requestType) {
-                                    case READ:
-                                        // It should return the value logCheck.sender contains in the cache,
-                                        // or if the sender didn't have the key in its cache it should return
-                                        // the correct value from the database
-                                        break;
-                                    case WRITE:
-                                        // Nothing to do here?
-                                        break;
-                                    case CRITREAD:
-                                        // It should return the correct value from the database
-                                        break;
-                                    case CRITWRITE:
-                                        // If we arrive here but there was another CRITWRITE for the same key
-                                        // previously requested by another client, the run is not consistent
-                                        // and we should return false
-                                        break;
-                                }
+                            if (logCheck.receiver == 0 && logCheck.requestType == Config.RequestType.CRITWRITE) {
+                                // If this is a CRITWRITE request, remember that a CRITWRITE
+                                // is currently handled by the database for the specified key
+                                handledCritWrites.add(logCheck.key);
                             }
                         } else {
-                            // The response is for another cache
-                            if (original.requestType == Config.RequestType.WRITE || original.requestType == Config.RequestType.CRITWRITE) {
-                                // We have to check whether we should update the cache with the new value or not
-                                // We have to check if the returned value is correct
-                                //   ( if it came from the database, check the database's state )
-                                //   ( if it came from the L1, check the L1's state )
+                            // We are dealing with a response, so we need to check that everything is consistent
+
+                            // Get the original request
+                            LogCheck original = requests.get(logCheck.uuid);
+
+                            if (Objects.equals(logCheck.receiver, original.sender)) {
+                                // If the response is for the final client who performed the request
+                                if (logCheck.value == null) {
+                                    // There was an error
+
+                                    // If the error was due to the fact that a CRITWRITE was handled
+                                    // when the request was received, we expected it!
+                                    if (errorsDueToCritWrites.contains(original.uuid)) {
+                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key);
+                                    }
+                                    errorsDueToCritWrites.remove(original.uuid);
+                                } else {
+                                    // No error - check everything is consistent
+                                    switch (original.requestType) {
+                                        case READ:
+                                            // The returned value should be consistent with what the caches had,
+                                            // or with the value contained by the database if the key was not in the cache
+                                            if (cachesState.get(logCheck.sender).containsKey(original.key)) {
+                                                if (!Objects.equals(cachesState.get(logCheck.sender).get(original.key), logCheck.value))
+                                                    return false;
+                                            } else if (cachesState.get(parentOf.get(logCheck.sender)).containsKey(original.key)) {
+                                                if (!Objects.equals(cachesState.get(parentOf.get(logCheck.sender)).get(original.key), logCheck.value))
+                                                    return false;
+                                            } else {
+                                                if (!Objects.equals(database.get(original.key), logCheck.value))
+                                                    return false;
+                                            }
+                                            break;
+                                        case WRITE:
+                                            // Nothing to do here?
+                                            break;
+                                        case CRITREAD:
+                                            // It should return the correct value from the database
+                                            if (!Objects.equals(database.get(original.key), logCheck.value))
+                                                return false;
+                                            break;
+                                        case CRITWRITE:
+                                            // Nothing to do here?
+                                            break;
+                                    }
+                                }
+                            } else {
+                                // The response is for another cache
+                                if (logCheck.value == null) {
+                                    // If the error was due to the fact that a CRITWRITE was handled
+                                    // when the request was received, we expected it!
+                                    if (errorsDueToCritWrites.contains(original.uuid)) {
+                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key);
+                                    }
+                                    errorsDueToCritWrites.remove(original.uuid);
+                                } else {
+                                    if (original.requestType == Config.RequestType.WRITE || original.requestType == Config.RequestType.CRITWRITE) {
+                                        // We have to check if the returned value is correct
+                                        if (logCheck.sender == 0) {
+                                            // The sender is the database, update the value
+                                            database.remove(original.key);
+                                            database.put(original.key, logCheck.value);
+
+                                            if (original.requestType == Config.RequestType.CRITWRITE) {
+                                                handledCritWrites.remove(original.key);
+                                            }
+                                        } else {
+                                            // The sender is an L1 cache, update the value if needed for both sender (L1) and receiver (L2)
+                                            if (cachesState.get(logCheck.sender).containsKey(original.key)) {
+                                                cachesState.get(logCheck.sender).remove(original.key);
+                                                cachesState.get(logCheck.sender).put(original.key, logCheck.value);
+                                            }
+                                            if (cachesState.get(logCheck.receiver).containsKey(original.key)) {
+                                                cachesState.get(logCheck.receiver).remove(original.key);
+                                                cachesState.get(logCheck.receiver).put(original.key, logCheck.value);
+                                            }
+                                        }
+                                    } else if (original.requestType == Config.RequestType.READ || original.requestType == Config.RequestType.CRITREAD) {
+                                        // Add in the cache's state the key-value pair
+                                        cachesState.get(logCheck.receiver).remove(original.key);
+                                        cachesState.get(logCheck.receiver).put(original.key, logCheck.value);
+                                    }
+                                }
                             }
                         }
                     }
@@ -104,7 +199,8 @@ public class Checker {
             throw new RuntimeException(e);
         }
 
-        return true;
+        // If we are still expecting some errors due to the CRITWRITES, it means the state is not consistent
+        return errorsDueToCritWrites.isEmpty();
     }
 
     /**
@@ -157,17 +253,8 @@ class LogCheck {
      * @param seqno       Sequence number associated with the event
      * @param uuid        Unique Identifier (UUID) associated with the event
      */
-    LogCheck(
-            String timestamp,
-            Integer sender,
-            Integer receiver,
-            Config.RequestType requestType,
-            boolean isResponse,
-            Integer key,
-            Integer value,
-            Integer seqno,
-            UUID uuid
-    ) {
+    public LogCheck(String timestamp, Integer sender, Integer receiver, Config.RequestType requestType, boolean isResponse,
+             Integer key, Integer value, Integer seqno, UUID uuid) {
         this.timestamp = timestamp;
         this.sender = sender;
         this.receiver = receiver;
@@ -185,7 +272,7 @@ class LogCheck {
      *
      * @param line String containing the information needed to create a LogCheck object
      */
-    LogCheck(String line) {
+    public LogCheck(String line) {
         String[] parts = line.split("\t");
 
         this.timestamp = parts[1];
@@ -214,3 +301,10 @@ class LogCheck {
         }
     }
 }
+
+/**
+ * OTHER TODOs
+ * - put some enums in place of true and false in Checker
+ * - maybe let the LogChecker deal with LogCheck(String line)
+ * - think alternative ways of implementing CRIT WRITE
+ */
