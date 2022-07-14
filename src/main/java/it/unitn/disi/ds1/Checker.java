@@ -283,7 +283,7 @@ class LogCheck {
         this.key = isParsable(parts[6]) ? Integer.parseInt(parts[6]) : null;
         this.value = isParsable(parts[7]) ? Integer.parseInt(parts[7]) : null;
         this.seqno = isParsable(parts[8]) ? Integer.parseInt(parts[8]) : null;
-        this.uuid = UUID.fromString(parts[9]);
+        this.uuid = !Objects.equals(parts[9], "null") ? UUID.fromString(parts[9]) : UUID.randomUUID();
     }
 
     /**

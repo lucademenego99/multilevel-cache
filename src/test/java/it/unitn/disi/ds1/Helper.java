@@ -58,11 +58,11 @@ public class Helper {
      * @param db Database of key-value pairs (Integer, Integer)
      * @return A tree representing the entire Actors architecture
      */
-    public static Architecture createArchiteture(ActorSystem system, Map<Integer, Integer> db){
+    public static Architecture createArchiteture(ActorSystem system, Map<Integer, Integer> db, Integer countL1, Integer countL2, Integer countClients){
         System.out.println("Creating tree structure...");
         Logger.DEBUG.info("Creating the tree structure...");
-        Logger.DEBUG.info("Starting with " + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
-                Config.N_L2 + " associated caches each");
+        Logger.DEBUG.info("Starting with " + countClients + " clients, " + countL1 + " caches having " +
+                countL2 + " associated caches each");
 
         // ids
         int id = -1;
@@ -78,7 +78,7 @@ public class Helper {
         List<ActorRef> l2Caches = new ArrayList<>();
 
         // Create N_L1 cache servers
-        for (int i = 0; i < Config.N_L1; i++) {
+        for (int i = 0; i < countL1; i++) {
             l1Caches.add(system.actorOf(Cache.props(++id, database, database), "l1-cache-" + i + "-" + id));
         }
         cacheTree.database.putAll(l1Caches);
@@ -86,7 +86,7 @@ public class Helper {
         // Create N_L2 cache servers
         for (int i = 0; i < l1Caches.size(); i++) {
             List<ActorRef> l2CachesTmp = new ArrayList<>();
-            for (int j = 0; j < Config.N_L2; j++) {
+            for (int j = 0; j < countL2; j++) {
                 // Create the L2 cache server
                 ActorRef newL2 = system.actorOf(Cache.props(++id, l1Caches.get(i), database),
                         "l2-cache-" + i + "-" + j + "-" + id);
@@ -107,7 +107,7 @@ public class Helper {
 
         // Create N_CLIENTS clients
         List<ActorRef> clients = new ArrayList<>();
-        for (int k = 0; k < Config.N_CLIENTS; k++) {
+        for (int k = 0; k < countClients; k++) {
             clients.add(system.actorOf(Client.props(++id), "client-" + k + "-" + id));
 
             // Send the L2 cache servers to the generated client
@@ -127,10 +127,7 @@ public class Helper {
     public static void clearLogFile(String filename){
         try{
             // Reset the log file
-            File file = new File(filename);
-            PrintWriter writer = new PrintWriter(file);
-            writer.print("");
-            writer.close();
+            new PrintWriter(filename).close();
         }catch(Exception exception){
             exception.printStackTrace();
         }

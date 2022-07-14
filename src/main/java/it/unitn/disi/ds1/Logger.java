@@ -3,13 +3,11 @@ package it.unitn.disi.ds1;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
+import java.util.logging.*;
 
 
 class VerySimpleFormatter extends Formatter {
@@ -42,9 +40,14 @@ public class Logger {
         CHECK.setLevel(Level.ALL);
         DEBUG.setLevel(Level.ALL);
 
+        for (Handler handler :
+                CHECK.getHandlers()) {
+            handler.close();
+        }
+
         // Provide a file where to save the logs
         try {
-            FileHandler logFile = new FileHandler("logs.txt");
+            FileHandler logFile = new FileHandler("logs.txt", false);
             Formatter txtFormatter = new VerySimpleFormatter();
             logFile.setFormatter(txtFormatter);
             CHECK.addHandler(logFile);
