@@ -18,6 +18,10 @@ public class CrashMessage extends Message {
      */
     public final Integer recoverIn;
 
+    /**
+     * Config.CrashType nextCrash constructor
+     * @param nextCrash next crash
+     */
     public CrashMessage(Config.CrashType nextCrash) {
         this.nextCrash = nextCrash;
         // The last number is not included, thus we have to add 1

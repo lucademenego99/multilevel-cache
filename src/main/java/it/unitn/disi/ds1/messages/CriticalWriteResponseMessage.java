@@ -7,7 +7,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * CriticalWriteResponseMessage message
+ */
 public class CriticalWriteResponseMessage extends Message {
+    /**
+     * Final decision enumerator
+     */
     public final Config.ACResponse finalDecision;
 
     /**
@@ -25,6 +31,13 @@ public class CriticalWriteResponseMessage extends Message {
      */
     public final Integer seqno;
 
+    /**
+     * Critical Response Message
+     * @param finalDecision final decision enum
+     * @param uuid uuid
+     * @param hops hops
+     * @param seqno sequence number
+     */
     public CriticalWriteResponseMessage(Config.ACResponse finalDecision, UUID uuid, List<ActorRef> hops, Integer seqno) {
         this.finalDecision = finalDecision;
         this.queryUUID = new UUID(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());

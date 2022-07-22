@@ -229,8 +229,7 @@ public class Client extends Actor {
      * @param msg recovery message
      */
     @Override
-    protected void onRecoveryMessage(RecoveryMessage msg) {
-    }
+    protected void onRecoveryMessage(RecoveryMessage msg) { };
 
     /**
      * Handler of the ResponseMessage
@@ -253,10 +252,6 @@ public class Client extends Actor {
             // Override the value in the sequence number cache
             this.seqnoCache.remove(requestKey);
             this.seqnoCache.put(requestKey, msg.seqno);
-            //Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
-            //                getSender().path().name()), msg.requestType,
-            //        true, requestKey, (Integer) msg.values.values().toArray()[0], msg.seqno, "Response"
-            //);
         } else {
             // If the L1 cache crashed, the L2 cache became L1, so we remove it from the caches the client can communicate with
             if (msg.requestType == Config.RequestType.READ) {
@@ -269,10 +264,6 @@ public class Client extends Actor {
             } else if (msg.requestType == Config.RequestType.CRITWRITE) {
                 Logger.DEBUG.warning("CritWrite operation failed");
             }
-            //Logger.logCheck(Level.FINE, this.id, this.getIdFromName(
-            //                getSender().path().name()), msg.requestType,
-            //        true, (Integer) msg.values.keySet().toArray()[0], null, msg.seqno, "Response"
-            //);
         }
     }
 

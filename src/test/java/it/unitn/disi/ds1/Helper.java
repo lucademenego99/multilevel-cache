@@ -6,15 +6,15 @@ import it.unitn.disi.ds1.actors.Cache;
 import it.unitn.disi.ds1.actors.Client;
 import it.unitn.disi.ds1.actors.Database;
 import it.unitn.disi.ds1.messages.JoinCachesMessage;
+import it.unitn.disi.ds1.messages.Message;
 import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
+import scala.concurrent.duration.Duration;
 
-import java.io.File;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Random;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test helper class
@@ -58,7 +58,13 @@ public class Helper {
      * @param db Database of key-value pairs (Integer, Integer)
      * @return A tree representing the entire Actors architecture
      */
-    public static Architecture createArchiteture(ActorSystem system, Map<Integer, Integer> db, Integer countL1, Integer countL2, Integer countClients){
+    public static Architecture createArchiteture(
+            ActorSystem system,
+            Map<Integer, Integer> db,
+            Integer countL1,
+            Integer countL2,
+            Integer countClients
+    ){
         System.out.println("Creating tree structure...");
         Logger.DEBUG.info("Creating the tree structure...");
         Logger.DEBUG.info("Starting with " + countClients + " clients, " + countL1 + " caches having " +
@@ -133,11 +139,117 @@ public class Helper {
         }
     }
 
+    /**
+     * Timeout
+     * @param milliseconds number of milliseconds
+     */
     public static void timeout(Integer milliseconds) {
         try {
             Thread.sleep(milliseconds);
         } catch (Exception e) {
             Logger.DEBUG.severe(e.toString());
         }
+    }
+
+    /**
+     * Returns a pseudo-random number between min and max, inclusive.
+     * The difference between min and max can be at most
+     * <code>Integer.MAX_VALUE - 1</code>.
+     *
+     * @param min Minimum value
+     * @param max Maximum value.  Must be greater than min.
+     * @return Integer between min and max, inclusive.
+     * @see java.util.Random#nextInt(int)
+     */
+    public static int randInt(int min, int max) {
+        final Random rand = new Random();
+        return rand.nextInt((max - min) + 1) + min;
+    }
+
+    /**
+     * Random action to take
+     * TODO, to finish
+     * @param upperBoundMilliseconds
+     */
+    public static void randomAction(Integer upperBoundMilliseconds, Float crashProbability){
+        int crashOrRequest = randInt(0, 100);
+        // Basically schedule the messages
+        if(crashOrRequest/100.0 < crashProbability){
+            // Crash
+            int randomCrash = randInt(1, Config.CrashType.values().length - 1); // All crashe types but the none
+            Config.CrashType crash = Config.CrashType.values()[randomCrash];
+            switch (crash){
+                case L1_AFTER_CRIT_READ:
+                    break;
+                case L1_AFTER_CRIT_WRITE:
+                    break;
+                case L1_AFTER_READ:
+                    break;
+                case L1_AFTER_RESPONSE:
+                    break;
+                case L1_AFTER_WRITE:
+                    break;
+                case L1_BEFORE_CRIT_READ:
+                    break;
+                case L1_BEFORE_CRIT_WRITE:
+                    break;
+                case L1_BEFORE_READ:
+                    break;
+                case L1_BEFORE_RESPONSE:
+                    break;
+                case L1_BEFORE_WRITE:
+                    break;
+                case L2_AFTER_CRIT_READ:
+                    break;
+                case L2_AFTER_CRIT_WRITE:
+                    break;
+                case L2_AFTER_READ:
+                    break;
+                case L2_AFTER_RESPONSE:
+                    break;
+                case L2_AFTER_WRITE:
+                    break;
+                case L2_BEFORE_CRIT_READ:
+                    break;
+                case L2_BEFORE_CRIT_WRITE:
+                    break;
+                case L2_BEFORE_READ:
+                    break;
+                case L2_BEFORE_RESPONSE:
+                    break;
+                case L2_BEFORE_WRITE:
+                    break;
+            }
+        }else{
+            // Message
+            int randomMessage = randInt(0, Config.RequestType.values().length - 2); // All crash types but the flush
+            Config.RequestType message = Config.RequestType.values()[randomMessage];
+            switch (message){
+                case READ:
+                    break;
+                case WRITE:
+                    break;
+                case CRITREAD:
+                    break;
+                case CRITWRITE:
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Schedules a message in an actor system to a recipient
+     * @param system actor system
+     * @param recipient recipient reference
+     * @param msg message to send
+     * @param timeoutMillis after how much time to send
+     */
+    public static void scheduleMessage(ActorSystem system, ActorRef recipient, Message msg, Integer timeoutMillis) {
+        system.scheduler().scheduleOnce(Duration.create(timeoutMillis, TimeUnit.MILLISECONDS),
+                recipient,                                                    // destination actor reference
+                msg,                                                          // Timeout message
+                system.dispatcher(),                                          // system dispatcher
+                recipient                                                     // source of the message (myself)
+        );
     }
 }

@@ -3,17 +3,22 @@ package it.unitn.disi.ds1;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.*;
 
 
+/***
+ * Class employed for the log formatting
+ */
 class VerySimpleFormatter extends Formatter {
 
-    /*
+    /**
+     * Format function
      * @see java.util.logging.Formatter#format(java.util.logging.LogRecord)
+     * @param record what to log
+     * @return formatted string
      */
     @Override
     public String format(LogRecord record) {
@@ -26,6 +31,9 @@ class VerySimpleFormatter extends Formatter {
  * Logger class
  */
 public class Logger {
+    /**
+     *  Debug Logger instance {@link java.util.logging.Logger logger}
+     */
     public final static java.util.logging.Logger DEBUG = java.util.logging.Logger.getLogger(Main.class.getName());
     /**
      * Logger instance {@link java.util.logging.Logger logger}
@@ -91,10 +99,20 @@ public class Logger {
         Logger.CHECK.log(logLevel, logMessage);
     }
 
+    /**
+     * Method employed for logging the configuration.
+     * @param countL1 number of L1 caches
+     * @param countL2 number of L2 caches
+     * @param countClients number of clients
+     */
     public static void logConfig(int countL1, int countL2, int countClients) {
         Logger.CHECK.log(Level.CONFIG, MessageFormat.format("\t{0}\t{1}\t{2}", countL1, countL2, countClients));
     }
 
+    /**
+     * Method employed for logging the database status
+     * @param database database
+     */
     public static void logDatabase(Map<Integer, Integer> database) {
         StringBuilder keyValuePairs = new StringBuilder();
         for (Map.Entry<Integer, Integer> entry : database.entrySet()) {

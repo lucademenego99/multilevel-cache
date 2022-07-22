@@ -64,7 +64,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -82,7 +83,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -100,7 +102,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -118,7 +121,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -136,7 +140,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -154,7 +159,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -172,7 +178,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -190,7 +197,8 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -208,12 +216,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(100);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -232,12 +242,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L2_AFTER_READ);
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(100);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -256,12 +268,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L1_BEFORE_READ);
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(100);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -280,12 +294,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L1_AFTER_READ);
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(100);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -304,12 +320,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_WRITE);
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(100);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -328,12 +346,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L1_BEFORE_WRITE);
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(500);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -353,19 +373,22 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
         // Client 1 reads keyToAskFor
-        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         // Wait for the READ to finish
         Helper.timeout(100);
 
         // Client 0 performs a write updating the value of keyToAskFor
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(100);
 
         // Client 1 reads again keyToAskFor
-        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -375,8 +398,7 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a Read, Write and Read on the same key, crash L1 after WRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500})
-        // Milleseconds to wait
+    @ValueSource(ints = {500}) // Milleseconds to wait
     void testReadAndWriteAndReadCrashL1AfterWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -385,19 +407,22 @@ public class ECCrashBasicTest {
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
         // Client 1 reads keyToAskFor
-        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         // Wait for the READ to finish
         Helper.timeout(100);
 
         // Client 0 performs a write updating the value of keyToAskFor
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, false), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(100);
 
         // Client 1 reads again keyToAskFor
-        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -407,8 +432,7 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L2 before CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500})
-        // Milleseconds to wait
+    @ValueSource(ints = {1000}) // Milleseconds to wait
     void testCritwriteAndReadCrashL2BeforeCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -416,12 +440,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_CRIT_WRITE);
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, true), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(300);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -429,10 +455,10 @@ public class ECCrashBasicTest {
         assertTrue(Checker.check(), "Not consistent");
     }
 
+    // TODO it crashes (Nullpointer exception)
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L2 after CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {1000})
-        // Milleseconds to wait
+    @ValueSource(ints = {1000}) // Milleseconds to wait
     void testCritwriteAndReadCrashL2AfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -440,12 +466,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L2_AFTER_CRIT_WRITE);
         architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, true), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(500);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -455,8 +483,7 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L1 before CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500})
-        // Milleseconds to wait
+    @ValueSource(ints = {500}) // Milleseconds to wait
     void testCritwriteAndReadCrashL1BeforeCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -464,12 +491,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L1_BEFORE_CRIT_WRITE);
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, true), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(300);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -479,8 +508,7 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L1 after CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500})
-        // Milleseconds to wait
+    @ValueSource(ints = {500}) // Milleseconds to wait
     void testCritwriteAndReadCrashL1AfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -488,12 +516,14 @@ public class ECCrashBasicTest {
         CrashMessage crash = new CrashMessage(Config.CrashType.L1_AFTER_CRIT_WRITE);
         architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
 
-        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(), null, true), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
         Helper.timeout(300);
 
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(), null, false, -1), ActorRef.noSender());
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
 
         Helper.timeout(timeToWait);
 
@@ -501,7 +531,6 @@ public class ECCrashBasicTest {
         assertTrue(Checker.check(), "Not consistent");
     }
 
-    @Test
     @DisplayName("Testing the the program with random message exchanges")
     @RepeatedTest(value = 10, name = "Repeat testMultipleRunWithoutCrash {currentRepetition} of {totalRepetition}")
     void testMultipleRunWithoutCrash() {

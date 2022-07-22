@@ -178,6 +178,7 @@ public class Checker {
                                                 cachesState.get(logCheck.sender).remove(original.key);
                                                 cachesState.get(logCheck.sender).put(original.key, logCheck.value);
                                             }
+                                            // TODO sometimes it crashes here
                                             if (cachesState.get(logCheck.receiver).containsKey(original.key)) {
                                                 cachesState.get(logCheck.receiver).remove(original.key);
                                                 cachesState.get(logCheck.receiver).put(original.key, logCheck.value);

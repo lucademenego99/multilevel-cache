@@ -80,11 +80,6 @@ public class Database extends Actor {
         return Props.create(Database.class, () -> new Database(id, database));
     }
 
-    @Override
-    public void preStart() {
-        // TODO schedule the things
-    }
-
     /**
      * Handler of JoinCachesMessage message.
      * Add all the joined caches as target for queries
@@ -346,16 +341,10 @@ public class Database extends Actor {
     }
 
     @Override
-    protected void onResponseMessage(ResponseMessage msg) {
-    }
-
-    ;
+    protected void onResponseMessage(ResponseMessage msg) { };
 
     @Override
-    protected void onTimeoutMessage(TimeoutMessage msg) {
-    }
-
-    ;
+    protected void onTimeoutMessage(TimeoutMessage msg) { };
 
     /**
      * Handler of the Recovery message
@@ -363,10 +352,7 @@ public class Database extends Actor {
      * @param msg recovery message
      */
     @Override
-    protected void onRecoveryMessage(RecoveryMessage msg) {
-    }
-
-    ;
+    protected void onRecoveryMessage(RecoveryMessage msg) { };
 
     /**
      * Handler of the messages

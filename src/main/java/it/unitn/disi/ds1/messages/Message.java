@@ -6,5 +6,4 @@ import java.io.Serializable;
  * Base class of the message
  * It implements {@links Serializable serializable}
  */
-public class Message implements Serializable {
-};
+public class Message implements Serializable { };
