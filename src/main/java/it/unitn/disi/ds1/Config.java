@@ -8,7 +8,6 @@ import java.util.Random;
  * Here there will be listed all the configuration which can be employed for the
  * program
  * <p>
- * TODO, would a YAML file be better?
  */
 public class Config {
     /**

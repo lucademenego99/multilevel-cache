@@ -5,8 +5,7 @@ import akka.actor.ActorSystem;
 import it.unitn.disi.ds1.actors.Cache;
 import it.unitn.disi.ds1.actors.Client;
 import it.unitn.disi.ds1.actors.Database;
-import it.unitn.disi.ds1.messages.JoinCachesMessage;
-import it.unitn.disi.ds1.messages.Message;
+import it.unitn.disi.ds1.messages.*;
 import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 import scala.concurrent.duration.Duration;
@@ -167,73 +166,145 @@ public class Helper {
     }
 
     /**
-     * Random action to take
-     * TODO, to finish
+     * Sends a random crash message in a random time bounded within a lower and upper bound
+     * @param system Actor system
+     * @param architecture Actor architecture
+     * @param lowerBoundMilliseconds lowerbound
+     * @param upperBoundMilliseconds upperbound
+     */
+    public static void randomCrash(ActorSystem system, Architecture architecture,
+                                   Integer lowerBoundMilliseconds, Integer upperBoundMilliseconds){
+        // Crash
+        int randomCrash = randInt(1, Config.CrashType.values().length - 1);
+        Config.CrashType crashType = Config.CrashType.values()[randomCrash];
+        CrashMessage crash = new CrashMessage(crashType);
+
+        // Send the crash message
+        switch (crashType){
+            case L1_AFTER_CRIT_READ:
+            case L1_AFTER_CRIT_WRITE:
+            case L1_AFTER_READ:
+            case L1_AFTER_RESPONSE:
+            case L1_AFTER_WRITE:
+            case L1_BEFORE_CRIT_READ:
+            case L1_BEFORE_CRIT_WRITE:
+            case L1_BEFORE_READ:
+            case L1_BEFORE_RESPONSE:
+            case L1_BEFORE_WRITE:
+                // Select random L1 cache
+                int randomCache = randInt(0, architecture.cacheTree.database.children.toArray().length - 1);
+                // Schedule the crash
+                Helper.scheduleMessage(
+                        system,
+                        architecture.cacheTree.database.children.get(randomCache).actor,
+                        crash,
+                        randInt(lowerBoundMilliseconds, upperBoundMilliseconds) // Random time
+                );
+                break;
+            case L2_AFTER_CRIT_READ:
+            case L2_AFTER_CRIT_WRITE:
+            case L2_AFTER_READ:
+            case L2_AFTER_RESPONSE:
+            case L2_AFTER_WRITE:
+            case L2_BEFORE_CRIT_READ:
+            case L2_BEFORE_CRIT_WRITE:
+            case L2_BEFORE_READ:
+            case L2_BEFORE_RESPONSE:
+            case L2_BEFORE_WRITE:
+                // Select random L1 cache
+                int randomCacheL1 = randInt(0, architecture.cacheTree.database.children.toArray().length - 1);
+                // Select random L2 cache
+                int randomCacheL2 = randInt(0,
+                        architecture.cacheTree.database.children.get(randomCacheL1).children.toArray().length - 1);
+                // Schedule the crash
+                Helper.scheduleMessage(
+                        system,
+                        architecture.cacheTree.database.children.get(randomCacheL1).children.get(randomCacheL2).actor,
+                        crash,
+                        randInt(lowerBoundMilliseconds, upperBoundMilliseconds) // Random time
+                );
+                break;
+        }
+    }
+
+    /**
+     * Sends a random message
+     * @param system Actor system
+     * @param architecture Actor architecture
+     * @param lowerBoundMilliseconds lowerbound in millis
+     * @param upperBoundMilliseconds upperbound in millis
+     */
+    public static void randomMessage(ActorSystem system, Architecture architecture, Map<Integer, Integer> database,
+                                     Integer lowerBoundMilliseconds, Integer upperBoundMilliseconds) {
+        // Crash
+        int randomMessage = randInt(0, Config.RequestType.values().length - 2); // All crash types but the flush
+        Config.RequestType message = Config.RequestType.values()[randomMessage];
+        // Random client
+        int randomClient = randInt(0, architecture.clients.size() - 1);
+        // Key
+        int key = (int) database.keySet().toArray()[0];
+        // New value
+        int newValue = randInt(0, 99);
+        switch (message){
+            case READ:
+                // Schedule the message
+                Helper.scheduleMessage(
+                    system,
+                    architecture.clients.get(randomClient),
+                    new ReadMessage(key, new ArrayList<>(), null,
+                            false, -1),
+                    randInt(lowerBoundMilliseconds, upperBoundMilliseconds) // Random time
+                );
+                break;
+            case WRITE:
+                // Schedule the message
+                Helper.scheduleMessage(
+                        system,
+                        architecture.clients.get(randomClient),
+                        new WriteMessage(key, newValue, new ArrayList<>(),
+                                null, false),
+                        randInt(lowerBoundMilliseconds, upperBoundMilliseconds) // Random time
+                );
+                break;
+            case CRITREAD:
+                // Schedule the message
+                Helper.scheduleMessage(
+                        system,
+                        architecture.clients.get(randomClient),
+                        new ReadMessage(key, new ArrayList<>(), null,
+                        true, -1),
+                        randInt(lowerBoundMilliseconds, upperBoundMilliseconds) // Random time
+                );
+                break;
+            case CRITWRITE:
+                // Schedule the message
+                Helper.scheduleMessage(
+                        system,
+                        architecture.clients.get(randomClient),
+                        new WriteMessage(key, newValue, new ArrayList<>(),
+                                null, true),
+                        randInt(lowerBoundMilliseconds, upperBoundMilliseconds) // Random time
+                );
+                break;
+        }
+    }
+
+
+    /**
+     * Random action to take, it includes both crashes and message
      * @param upperBoundMilliseconds
      */
-    public static void randomAction(Integer upperBoundMilliseconds, Float crashProbability){
+    public static void randomAction(ActorSystem system, Architecture architecture, Map<Integer, Integer> database,
+                                    Integer lowerBoundMilliseconds, Integer upperBoundMilliseconds,
+                                    Float crashProbability){
         int crashOrRequest = randInt(0, 100);
         // Basically schedule the messages
         if(crashOrRequest/100.0 < crashProbability){
             // Crash
-            int randomCrash = randInt(1, Config.CrashType.values().length - 1); // All crashe types but the none
-            Config.CrashType crash = Config.CrashType.values()[randomCrash];
-            switch (crash){
-                case L1_AFTER_CRIT_READ:
-                    break;
-                case L1_AFTER_CRIT_WRITE:
-                    break;
-                case L1_AFTER_READ:
-                    break;
-                case L1_AFTER_RESPONSE:
-                    break;
-                case L1_AFTER_WRITE:
-                    break;
-                case L1_BEFORE_CRIT_READ:
-                    break;
-                case L1_BEFORE_CRIT_WRITE:
-                    break;
-                case L1_BEFORE_READ:
-                    break;
-                case L1_BEFORE_RESPONSE:
-                    break;
-                case L1_BEFORE_WRITE:
-                    break;
-                case L2_AFTER_CRIT_READ:
-                    break;
-                case L2_AFTER_CRIT_WRITE:
-                    break;
-                case L2_AFTER_READ:
-                    break;
-                case L2_AFTER_RESPONSE:
-                    break;
-                case L2_AFTER_WRITE:
-                    break;
-                case L2_BEFORE_CRIT_READ:
-                    break;
-                case L2_BEFORE_CRIT_WRITE:
-                    break;
-                case L2_BEFORE_READ:
-                    break;
-                case L2_BEFORE_RESPONSE:
-                    break;
-                case L2_BEFORE_WRITE:
-                    break;
-            }
+            Helper.randomCrash(system, architecture, lowerBoundMilliseconds, upperBoundMilliseconds);
         }else{
             // Message
-            int randomMessage = randInt(0, Config.RequestType.values().length - 2); // All crash types but the flush
-            Config.RequestType message = Config.RequestType.values()[randomMessage];
-            switch (message){
-                case READ:
-                    break;
-                case WRITE:
-                    break;
-                case CRITREAD:
-                    break;
-                case CRITWRITE:
-                    break;
-            }
+            Helper.randomMessage(system, architecture, database, lowerBoundMilliseconds, upperBoundMilliseconds);
         }
     }
 
