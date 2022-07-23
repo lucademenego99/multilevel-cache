@@ -161,6 +161,12 @@ public class Checker {
                                         System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key);
                                     }
                                     errorsDueToCritWrites.remove(original.uuid);
+
+                                    // We got the response from the database, so even if it's an error
+                                    // we have to remove the request from the handledCritWrites
+                                    if (original.requestType == Config.RequestType.CRITWRITE) {
+                                        handledCritWrites.remove(original.key);
+                                    }
                                 } else {
                                     if (original.requestType == Config.RequestType.WRITE || original.requestType == Config.RequestType.CRITWRITE) {
                                         // We have to check if the returned value is correct

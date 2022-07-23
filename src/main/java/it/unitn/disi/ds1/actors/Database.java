@@ -315,10 +315,10 @@ public class Database extends Actor {
             }
         } else {
             // Got NO, I can abort
-            this.clearCriticalWrite(msg.queryUUID);
             Integer key = this.criticalSessionKey.get(msg.queryUUID);
             Integer value = this.criticalKeyValue.get(key);
             Logger.DEBUG.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " + key + " value " + value);
+            this.clearCriticalWrite(msg.queryUUID);
             // TODO: we will also need to send the response to the client, hence we need the usual hops etc
             this.multicastAndCheck(
                     new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null),

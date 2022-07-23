@@ -599,20 +599,6 @@ public class Cache extends Actor {
     }
 
     protected void onCriticalWriteResponseMessage(CriticalWriteResponseMessage msg) {
-        System.out.println("IO SONO LA CACHE " + getContext().getSelf().path().name());
-        System.out.println(this.criticalSessionKey);
-        System.out.println(this.criticalKeyValue);
-        System.out.println(this.receivedAcksForCritWrite);
-        System.out.println(this.cachedDatabase);
-        System.out.println(msg.finalDecision);
-        System.out.println(msg.seqno);
-        System.out.println(msg.queryUUID);
-
-        // TODO, it may have broken everything
-        if(!this.criticalSessionKey.containsKey(msg.queryUUID)){
-            return;
-        }
-
         int keyToUpdate = this.criticalSessionKey.get(msg.queryUUID);
         int newValue = this.criticalKeyValue.get(keyToUpdate);
 

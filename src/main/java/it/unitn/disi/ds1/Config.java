@@ -39,7 +39,7 @@ public class Config {
     /**
      * Timeout after which the client will make a request to a new cache
      */
-    public final static int CLIENT_TIMEOUT = 1000;
+    public final static int CLIENT_TIMEOUT = 1500;
 
     /**
      * Minimum milliseconds to wait to recover a crash
