@@ -10,6 +10,7 @@ import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 import scala.concurrent.duration.Duration;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.util.Random;
 import java.util.*;
@@ -131,9 +132,12 @@ public class Helper {
      */
     public static void clearLogFile(String filename){
         try{
-            // Reset the log file
-            new PrintWriter(filename).close();
+            // Reset the log file by deleting and recreating the log file
+            File file = new File(filename);
+            file.delete();
+            file.createNewFile();
         }catch(Exception exception){
+            System.err.println("Impossible to delete and recreate the log file");
             exception.printStackTrace();
         }
     }
