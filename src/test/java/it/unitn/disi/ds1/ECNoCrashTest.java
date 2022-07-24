@@ -43,6 +43,7 @@ public class ECNoCrashTest {
 
     @BeforeEach
     void resetState() {
+        Helper.initializeLogger();
         this.system = Helper.createActorSystem();
         this.database = Helper.createDatabase();
 
@@ -309,7 +310,7 @@ public class ECNoCrashTest {
     @DisplayName("Testing the the program with random message exchanges with crashes for some seconds")
     @ParameterizedTest
     @MethodSource("provideParameters")
-    void testRandomActionForPredefinitetTimeWithCrash(int minTimeToWait, int maxTimeToWait, int durationSeconds) {
+    void testRandomActionForPredefinedTimeWithCrash(int minTimeToWait, int maxTimeToWait, int durationSeconds) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
         float crashProbability = (float) 0.05;

@@ -269,6 +269,12 @@ public class Database extends Actor {
      * @param msg
      */
     protected void onCriticalUpdateResponseMessage(CriticalUpdateResponseMessage msg) {
+        // If this.criticalSessionKey doesn't contain msg.queryUUID, it means the database
+        // already handled this critical write by aborting. In this case we can just return
+        if (!this.criticalSessionKey.containsKey(msg.queryUUID)) {
+            return;
+        }
+
         // Got an OK -> voted yes
         if (msg.response == Config.CUResponse.OK) {
             // Add the sender to the list of received acknowledgements

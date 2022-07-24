@@ -96,7 +96,7 @@ public class Checker {
 
                             // If there is already a CRITWRITE on this key
                             if (handledCritWrites.contains(logCheck.key)) {
-                                System.out.println("There should be an error due to a CRITWRITE being handled for key " + logCheck.key);
+                                System.out.println("There should be an error due to a CRITWRITE being handled for key " + logCheck.key + " and uuid " + logCheck.uuid);
                                 errorsDueToCritWrites.add(logCheck.uuid);
                             }
 
@@ -119,7 +119,7 @@ public class Checker {
                                     // If the error was due to the fact that a CRITWRITE was handled
                                     // when the request was received, we expected it!
                                     if (errorsDueToCritWrites.contains(original.uuid)) {
-                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key);
+                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key + " and uuid " + logCheck.uuid);
                                     }
                                     errorsDueToCritWrites.remove(original.uuid);
                                 } else {
@@ -129,14 +129,20 @@ public class Checker {
                                             // The returned value should be consistent with what the caches had,
                                             // or with the value contained by the database if the key was not in the cache
                                             if (cachesState.get(logCheck.sender).containsKey(original.key)) {
-                                                if (!Objects.equals(cachesState.get(logCheck.sender).get(original.key), logCheck.value))
+                                                if (!Objects.equals(cachesState.get(logCheck.sender).get(original.key), logCheck.value)) {
+                                                    System.err.println("Not consistent - the read returned a wrong value");
                                                     return false;
+                                                }
                                             } else if (cachesState.get(parentOf.get(logCheck.sender)).containsKey(original.key)) {
-                                                if (!Objects.equals(cachesState.get(parentOf.get(logCheck.sender)).get(original.key), logCheck.value))
+                                                if (!Objects.equals(cachesState.get(parentOf.get(logCheck.sender)).get(original.key), logCheck.value)) {
+                                                    System.err.println("Not consistent - the read returned a wrong value");
                                                     return false;
+                                                }
                                             } else {
-                                                if (!Objects.equals(database.get(original.key), logCheck.value))
+                                                if (!Objects.equals(database.get(original.key), logCheck.value)) {
+                                                    System.err.println("Not consistent - the read returned a wrong value");
                                                     return false;
+                                                }
                                             }
                                             break;
                                         case WRITE:
@@ -144,8 +150,10 @@ public class Checker {
                                             break;
                                         case CRITREAD:
                                             // It should return the correct value from the database
-                                            if (!Objects.equals(database.get(original.key), logCheck.value))
+                                            if (!Objects.equals(database.get(original.key), logCheck.value)) {
+                                                System.err.println("Not consistent - the critread returned a wrong value");
                                                 return false;
+                                            }
                                             break;
                                         case CRITWRITE:
                                             // Nothing to do here?
@@ -158,7 +166,7 @@ public class Checker {
                                     // If the error was due to the fact that a CRITWRITE was handled
                                     // when the request was received, we expected it!
                                     if (errorsDueToCritWrites.contains(original.uuid)) {
-                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key);
+                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key + " and uuid " + logCheck.uuid);
                                     }
                                     errorsDueToCritWrites.remove(original.uuid);
 
@@ -184,7 +192,6 @@ public class Checker {
                                                 cachesState.get(logCheck.sender).remove(original.key);
                                                 cachesState.get(logCheck.sender).put(original.key, logCheck.value);
                                             }
-                                            // TODO sometimes it crashes here
                                             if (cachesState.get(logCheck.receiver).containsKey(original.key)) {
                                                 cachesState.get(logCheck.receiver).remove(original.key);
                                                 cachesState.get(logCheck.receiver).put(original.key, logCheck.value);
@@ -207,6 +214,9 @@ public class Checker {
         }
 
         // If we are still expecting some errors due to the CRITWRITES, it means the state is not consistent
+        if (!errorsDueToCritWrites.isEmpty()) {
+            System.err.println("Not consistent - errors due to critwrites is not empty: " + errorsDueToCritWrites);
+        }
         return errorsDueToCritWrites.isEmpty();
     }
 

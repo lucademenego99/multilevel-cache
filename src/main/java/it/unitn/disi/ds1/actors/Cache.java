@@ -599,6 +599,9 @@ public class Cache extends Actor {
     }
 
     protected void onCriticalWriteResponseMessage(CriticalWriteResponseMessage msg) {
+        if (!this.criticalSessionKey.containsKey(msg.queryUUID)) {
+            return;
+        }
         int keyToUpdate = this.criticalSessionKey.get(msg.queryUUID);
         int newValue = this.criticalKeyValue.get(keyToUpdate);
 
