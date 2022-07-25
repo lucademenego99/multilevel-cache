@@ -31,10 +31,13 @@ test {
 }
 
 // The main class in the manifest
-jar.manifest {
-    attributes(
-            'Main-Class': 'it.unitn.disi.ds1.Main'
-    )
+jar {
+    manifest {
+            attributes 'Main-Class': 'it.unitn.disi.ds1.Main'
+    }
+    from {
+            configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
 
