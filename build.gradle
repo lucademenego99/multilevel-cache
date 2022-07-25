@@ -14,14 +14,15 @@ repositories {
     mavenLocal()
 }
 
-// Dependencies: Akka and JUnitTests
+// Dependencies: Akka, Oracle Cli and JUnitTests
 dependencies {
     implementation platform("com.typesafe.akka:akka-bom_2.13:2.6.13")
     implementation "com.typesafe.akka:akka-actor_2.13"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
-    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.8.2'
+    testImplementation "org.junit.jupiter:junit-jupiter-params:5.8.2"
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
     implementation 'org.scala-lang:scala-library:2.13.8'
+    implementation 'commons-cli:commons-cli:1.5.0'
 }
 
 // Gradle test

@@ -33,10 +33,11 @@ public class CriticalWriteResponseMessage extends Message {
 
     /**
      * Critical Response Message
+     *
      * @param finalDecision final decision enum
-     * @param uuid uuid
-     * @param hops hops
-     * @param seqno sequence number
+     * @param uuid          uuid
+     * @param hops          hops
+     * @param seqno         sequence number
      */
     public CriticalWriteResponseMessage(Config.ACResponse finalDecision, UUID uuid, List<ActorRef> hops, Integer seqno) {
         this.finalDecision = finalDecision;

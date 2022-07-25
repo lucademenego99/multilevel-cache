@@ -6,7 +6,8 @@ import it.unitn.disi.ds1.messages.CrashMessage;
 import it.unitn.disi.ds1.messages.ReadMessage;
 import it.unitn.disi.ds1.messages.WriteMessage;
 import it.unitn.disi.ds1.structures.Architecture;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -19,26 +20,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for the following setting:
  * - no crashes
  * - an architecture with only 1 L1, 1 L2 and 2 clients
- *
  */
 public class ECCrashBasicTest {
-
-    private ActorSystem system;
-    private Architecture architecture;
-    private Map<Integer, Integer> database;
 
     /**
      * Basic information about the created architecture
      */
     private final int countL1 = 1, countL2 = 1, countClients = 2;
+    private ActorSystem system;
+    private Architecture architecture;
+    private Map<Integer, Integer> database;
 
     @BeforeEach
     void resetState() {
-        Helper.initializeLogger();
-        this.system = Helper.createActorSystem();
-        this.database = Helper.createDatabase();
-
-        this.architecture = Helper.createArchiteture(this.system, this.database, countL1, countL2, countClients);
+        Utils.initializeLogger();
+        this.system = Utils.createActorSystem();
+        this.database = Utils.createDatabase();
+        this.architecture = Utils.createArchiteture(this.system, this.database, countL1, countL2, countClients);
         // Clear the log file
         Helper.clearLogFile("logs.txt");
         // Log config
@@ -59,7 +57,7 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
@@ -77,14 +75,15 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
 
     @DisplayName("Testing the READ functionality, crash L1 before read")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testReadCrashL1BeforeRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -95,7 +94,7 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
@@ -113,7 +112,7 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
@@ -131,14 +130,15 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
                 null, false), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
 
     @DisplayName("Testing the WRITE functionality, crash L2 after write")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteCrashL2AfterWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -149,7 +149,7 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
                 null, false), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
@@ -167,7 +167,7 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
                 null, false), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
@@ -185,14 +185,15 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
                 null, false), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         assertTrue(Checker.check(), "Not consistent");
     }
 
     @DisplayName("Testing a READ after a WRITE on the same key, crash L2 before READ")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteAndReadCrashL2BeforeRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -204,12 +205,12 @@ public class ECCrashBasicTest {
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(200);
+        Utils.timeout(200);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -229,12 +230,12 @@ public class ECCrashBasicTest {
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(200);
+        Utils.timeout(200);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -254,12 +255,12 @@ public class ECCrashBasicTest {
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(200);
+        Utils.timeout(200);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -279,12 +280,12 @@ public class ECCrashBasicTest {
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(200);
+        Utils.timeout(200);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -304,12 +305,12 @@ public class ECCrashBasicTest {
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(2000);
+        Utils.timeout(2000);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -329,12 +330,12 @@ public class ECCrashBasicTest {
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(2000);
+        Utils.timeout(2000);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -355,20 +356,20 @@ public class ECCrashBasicTest {
                 null, false, -1), ActorRef.noSender());
 
         // Wait for the READ to finish
-        Helper.timeout(200);
+        Utils.timeout(200);
 
         // Client 0 performs a write updating the value of keyToAskFor
         this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(300);
+        Utils.timeout(300);
 
         // Client 1 reads again keyToAskFor
         this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The second read should return the latest value
         assertTrue(Checker.check(), "Not consistent");
@@ -389,20 +390,20 @@ public class ECCrashBasicTest {
                 null, false, -1), ActorRef.noSender());
 
         // Wait for the READ to finish
-        Helper.timeout(200);
+        Utils.timeout(200);
 
         // Client 0 performs a write updating the value of keyToAskFor
         this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
                 null, false), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(300);
+        Utils.timeout(300);
 
         // Client 1 reads again keyToAskFor
         this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The second read should return the latest value
         assertTrue(Checker.check(), "Not consistent");
@@ -421,7 +422,7 @@ public class ECCrashBasicTest {
         this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
                 null, true), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -441,12 +442,12 @@ public class ECCrashBasicTest {
                 null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(2000);
+        Utils.timeout(2000);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -466,12 +467,12 @@ public class ECCrashBasicTest {
                 null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(300);
+        Utils.timeout(300);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -491,12 +492,12 @@ public class ECCrashBasicTest {
                 null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(2000);
+        Utils.timeout(2000);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");
@@ -516,12 +517,12 @@ public class ECCrashBasicTest {
                 null, true), ActorRef.noSender());
 
         // Wait for the WRITE to finish
-        Helper.timeout(300);
+        Utils.timeout(300);
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
 
-        Helper.timeout(timeToWait);
+        Utils.timeout(timeToWait);
 
         // The last read should return the new value of the last write
         assertTrue(Checker.check(), "Not consistent");

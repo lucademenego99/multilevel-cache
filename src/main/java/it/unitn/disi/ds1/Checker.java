@@ -271,7 +271,7 @@ class LogCheck {
      * @param uuid        Unique Identifier (UUID) associated with the event
      */
     public LogCheck(String timestamp, Integer sender, Integer receiver, Config.RequestType requestType, boolean isResponse,
-             Integer key, Integer value, Integer seqno, UUID uuid) {
+                    Integer key, Integer value, Integer seqno, UUID uuid) {
         this.timestamp = timestamp;
         this.sender = sender;
         this.receiver = receiver;

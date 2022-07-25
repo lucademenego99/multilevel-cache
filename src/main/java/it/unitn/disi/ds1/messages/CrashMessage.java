@@ -20,6 +20,7 @@ public class CrashMessage extends Message {
 
     /**
      * Config.CrashType nextCrash constructor
+     *
      * @param nextCrash next crash
      */
     public CrashMessage(Config.CrashType nextCrash) {

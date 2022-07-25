@@ -22,8 +22,9 @@ public class CriticalUpdateTimeoutMessage extends Message {
 
     /**
      * CriticalUpdateTimeoutMessage
+     *
      * @param queryUUID query uuid
-     * @param hops hops
+     * @param hops      hops
      */
     public CriticalUpdateTimeoutMessage(UUID queryUUID, List<ActorRef> hops) {
         this.queryUUID = new UUID(queryUUID.getMostSignificantBits(), queryUUID.getLeastSignificantBits());

@@ -10,7 +10,7 @@ import java.util.logging.Logger;
  */
 public class DistributedCacheTree {
     /**
-     *  Debug Logger instance {@link java.util.logging.Logger logger}
+     * Debug Logger instance {@link java.util.logging.Logger logger}
      */
     private final static Logger LOGGER = Logger.getLogger(DistributedCacheTree.class.getName());
 
@@ -21,6 +21,7 @@ public class DistributedCacheTree {
 
     /**
      * Constructor of the Tree Cache
+     *
      * @param database database
      */
     public DistributedCacheTree(ActorRef database) {
@@ -30,6 +31,7 @@ public class DistributedCacheTree {
 
     /**
      * To string
+     *
      * @return toString string
      */
     @Override

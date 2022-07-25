@@ -229,7 +229,10 @@ public class Client extends Actor {
      * @param msg recovery message
      */
     @Override
-    protected void onRecoveryMessage(RecoveryMessage msg) { };
+    protected void onRecoveryMessage(RecoveryMessage msg) {
+    }
+
+    ;
 
     /**
      * Handler of the ResponseMessage
@@ -244,7 +247,7 @@ public class Client extends Actor {
         this.shouldReceiveResponse = false;
 
         if (msg.values != null) {
-            Logger.DEBUG.warning("Operation " + msg.requestType + " completed successful got " +
+            Logger.DEBUG.info("Operation " + msg.requestType + " completed successful got " +
                     msg.values.keySet().toArray()[0] + " got " + msg.values.values().toArray()[0] +
                     " sequence number:" + msg.seqno);
 
@@ -255,14 +258,14 @@ public class Client extends Actor {
         } else {
             // If the L1 cache crashed, the L2 cache became L1, so we remove it from the caches the client can communicate with
             if (msg.requestType == Config.RequestType.READ) {
-                Logger.DEBUG.warning("Read operation failed");
+                Logger.DEBUG.info("Read operation failed");
                 this.caches.remove(getSender());
             } else if (msg.requestType == Config.RequestType.WRITE) {
-                Logger.DEBUG.warning("Write operation failed");
+                Logger.DEBUG.info("Write operation failed");
             } else if (msg.requestType == Config.RequestType.CRITREAD) {
-                Logger.DEBUG.warning("CritRead operation failed");
+                Logger.DEBUG.info("CritRead operation failed");
             } else if (msg.requestType == Config.RequestType.CRITWRITE) {
-                Logger.DEBUG.warning("CritWrite operation failed");
+                Logger.DEBUG.info("CritWrite operation failed");
             }
         }
     }

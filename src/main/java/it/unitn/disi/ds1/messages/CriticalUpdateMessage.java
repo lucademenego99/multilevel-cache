@@ -25,10 +25,11 @@ public class CriticalUpdateMessage extends Message {
 
     /**
      * CriticalUpdateMessage constructor
-     * @param updatedKey updated key
+     *
+     * @param updatedKey   updated key
      * @param updatedValue updated value
-     * @param uuid uuid
-     * @param hops hops
+     * @param uuid         uuid
+     * @param hops         hops
      */
     public CriticalUpdateMessage(int updatedKey, int updatedValue, UUID uuid, List<ActorRef> hops) {
         this.updatedKey = updatedKey;

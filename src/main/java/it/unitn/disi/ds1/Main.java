@@ -1,19 +1,13 @@
 package it.unitn.disi.ds1;
 
-import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import it.unitn.disi.ds1.actors.Cache;
-import it.unitn.disi.ds1.actors.Client;
-import it.unitn.disi.ds1.actors.Database;
-import it.unitn.disi.ds1.messages.*;
 import it.unitn.disi.ds1.structures.Architecture;
-import it.unitn.disi.ds1.structures.DistributedCacheTree;
+import org.apache.commons.cli.*;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Scanner;
 
 /***
  * Main class of the project
@@ -24,145 +18,156 @@ public class Main {
      * @param args command line arguments
      */
     public static void main(String[] args) {
-        // Create the actor system
-        final ActorSystem system = ActorSystem.create("distributed-cache");
+        /**
+         * Defaults
+         */
+        int countL1 = 5;
+        int countL2 = 5;
+        int countClients = 3;
+        int secondsForIteration = 20;
 
-        // Initialize the Logger
-        Logger.initLogger();
+        /**
+         * Command line parser
+         */
+        CommandLineParser cmdLineParser = new DefaultParser();
 
-        // Log the architecture configuration
-        Logger.logConfig(Config.N_L1, Config.N_L2, Config.N_CLIENTS);
+        Options options = new Options();
+        options.addOption(Option.builder().
+                longOpt("l1")
+                .argName("Number of l1 caches")
+                .hasArg(true)
+                .desc("Number of L1 caches which will be present in the hierarchical distributed cache")
+                .type(Integer.class)
+                .build()
+        );
 
-        // Create a database initialized with random values
-        Map<Integer, Integer> database = initializeDatabase();
-        database.put(21, 99);   // DEBUG
-        database.put(62, 88);   // DEBUG
+        options.addOption(Option.builder().
+                longOpt("l2")
+                .argName("Number of l2 caches")
+                .hasArg(true)
+                .desc("Number of L2 caches which will be present in the hierarchical distributed cache")
+                .type(Integer.class)
+                .build()
+        );
 
-        // Log the database for later checks
-        Logger.logDatabase(database);
+        options.addOption(Option.builder().
+                longOpt("clients")
+                .argName("Number of clients")
+                .hasArg(true)
+                .desc("Number of clients connected to the hierarchical distributed cache")
+                .type(Integer.class)
+                .build()
+        );
 
-        // Set up the main architecture of the distributed cache system
-        Architecture architecture = setupStructure(system, database);
-        Logger.DEBUG.info(architecture.toString());
+        options.addOption(Option.builder().
+                longOpt("seconds")
+                .argName("Number of seconds per iteration")
+                .hasArg(true)
+                .desc("Number of seconds each iteration takes")
+                .type(Integer.class)
+                .build()
+        );
 
+        /**
+         * Parse the arguments
+         */
         try {
-            Thread.sleep(500);
-        } catch (Exception e) {
-            Logger.DEBUG.severe(e.toString());
+            CommandLine cmdLine = cmdLineParser.parse(options, args);
+
+            if (cmdLine.hasOption("l1") && (Integer) cmdLine.getParsedOptionValue("l1") > 0) {
+                countL1 = (Integer) cmdLine.getParsedOptionValue("l1");
+            } else {
+                System.out.println("l1 argument not found or invalid, using default: " + countL1);
+            }
+
+            if (cmdLine.hasOption("l2") && (Integer) cmdLine.getParsedOptionValue("l2") > 0) {
+                countL2 = (Integer) cmdLine.getParsedOptionValue("l2");
+            } else {
+                System.out.println("l2 argument not found or invalid, using default: " + countL2);
+            }
+
+            if (cmdLine.hasOption("clients") && (Integer) cmdLine.getParsedOptionValue("clients") > 0) {
+                countClients = (Integer) cmdLine.getParsedOptionValue("clients");
+            } else {
+                System.out.println("clients argument not found or invalid, using default: " + countClients);
+            }
+
+            if (cmdLine.hasOption("seconds") && (Integer) cmdLine.getParsedOptionValue("seconds") > 0) {
+                secondsForIteration = (Integer) cmdLine.getParsedOptionValue("seconds");
+            } else {
+                System.out.println("seconds argument not found or invalid, using default: " + secondsForIteration);
+            }
+        } catch (ParseException e) {
+            e.printStackTrace();
+            System.exit(1);
         }
 
         /**
-         * Test crash L2 before read
+         * Initialize the logger
          */
-        // CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
-        // architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
+        Utils.initializeLogger();
 
         /**
-         * Test send some random read messages
+         * Setup actor system, database and architecture
          */
-        /*
-        for (int i = 0; i < Config.N_ITERATIONS; i++) {
-            // Read request for key 21
-            for (int j = 0; j < Config.N_CLIENTS; j++) {
-                int requestKey = (int) database.keySet().toArray()[Config.RANDOM.nextInt(database.keySet().toArray().length)];
-                if (j == 0) {
-                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null,
-                            false, -1), ActorRef.noSender());
-                } else {
-                    architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null,
-                            false, -1), ActorRef.noSender());
+        ActorSystem system = Utils.createActorSystem();
+        Map<Integer, Integer> database = Utils.createDatabase();
+        Architecture architecture = Utils.createArchiteture(system, database, countL1, countL2, countClients);
+
+        /**
+         * Setup log file
+         */
+        Logger.logConfig(countL1, countL2, countClients);
+        Logger.logDatabase(database);
+
+        /* Log the architecture */
+        Logger.DEBUG.info(architecture.toString());
+
+        /**
+         * Main
+         */
+        float crashProbability = (float) 0.05;
+        int maxTimeToWait = 300;
+        int minTimeToWait = 100;
+        int timePassedInSeconds = 0;
+        boolean keepLooping = true;
+        boolean repeat;
+
+        LocalDateTime then = LocalDateTime.now();
+
+        do {
+            // Iterate for secondsForIteration seconds and do random actions
+            while (keepLooping) {
+                // Random message
+                Utils.randomAction(system, architecture, database,
+                        minTimeToWait, maxTimeToWait, crashProbability);
+                // Wait for something to finish
+                Utils.timeout(maxTimeToWait);
+                if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= secondsForIteration) {
+                    keepLooping = false;
                 }
             }
 
-            try {
-                Thread.sleep(1000);
-            } catch (Exception e) {
-                Logger.DEBUG.severe(e.toString());
-            }
+            // Update the current execution time
+            timePassedInSeconds += secondsForIteration;
 
-            architecture.clients.get(0).tell(
-                    new WriteMessage(21, i, new ArrayList<>(), null, false),
-                    ActorRef.noSender()
-            );
-            try {
-                Thread.sleep(2000);
-            } catch (Exception e) {
-                Logger.DEBUG.severe(e.toString());
-            }
-        }
-        */
+            // Small timeout
+            Utils.timeout(maxTimeToWait * 2);
 
+            // Ask for repetition
+            repeat = askToContinue(timePassedInSeconds);
 
-        /**
-         * Test simple write
-         */
-        // architecture.clients.get(0).tell(new WriteMessage(21, 99, new ArrayList<>(), null, false), ActorRef.noSender());
+            // Reset loop
+            then = LocalDateTime.now();
+            keepLooping = true;
+        } while (repeat);
 
-        /**
-         * Test Critical Read
-         */
-        // architecture.clients.get(1).tell(new ReadMessage(21, new ArrayList<>(), null, true, -1), ActorRef.noSender());
-        // Sleep
-        // try {
-        //     Thread.sleep(3000);
-        // } catch (Exception e) {
-        //     Logger.INSTANCE.severe(e.toString());
-        // }
-        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, true, -1), ActorRef.noSender());
-
-        /**
-         * Test Critical Write
-         */
-        // Perform a read
-        // architecture.clients.get(0).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
-        // architecture.clients.get(1).tell(new ReadMessage(62, new ArrayList<>(), null, false, -1), ActorRef.noSender());
-
-        // Sleep
-        try {
-            Thread.sleep(3000);
-        } catch (Exception e) {
-            Logger.DEBUG.severe(e.toString());
-        }
-
-        // Perform the critical write
-        // architecture.clients.get(0).tell(new WriteMessage(21, 6, new ArrayList<>(), null, true), ActorRef.noSender());
-        try {
-            Thread.sleep(50);
-        } catch (Exception e) {
-            Logger.DEBUG.severe(e.toString());
-        }
-        // architecture.clients.get(3).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
-        // architecture.clients.get(1).tell(new WriteMessage(62, 2, new ArrayList<>(), null, true), ActorRef.noSender());
-
-        // Start performing read requests with other clients on the same key
-        // Someone should get null responses if the critical write operation hasn't completed yet
-        for (int i = 0; i < Config.N_ITERATIONS; i++) {
-            // Read request for key 21
-            for (int j = 2; j < Config.N_CLIENTS; j++) {
-                // architecture.clients.get(j).tell(new ReadMessage(21, new ArrayList<>(), null, false, -1), ActorRef.noSender());
-            }
-            try {
-                Thread.sleep(20);
-            } catch (Exception e) {
-                Logger.DEBUG.severe(e.toString());
-            }
-        }
-
-        // inputContinue();
-
-        try {
-            Thread.sleep(3000);
-        } catch (Exception e) {
-            Logger.DEBUG.severe(e.toString());
-        }
-
-        // Start distributed snapshot -> the cached values for key 21 should now contain 1
-        architecture.cacheTree.database.actor.tell(new StartSnapshotMessage(), ActorRef.noSender());
-
-        try {
-            Thread.sleep(1000);
-        } catch (Exception e) {
-            Logger.DEBUG.severe(e.toString());
+        // Consistency check
+        boolean consistent = Checker.check();
+        if (consistent) {
+            System.out.println("The system is in a consistent state [eventual consistency]");
+        } else {
+            System.out.println("The system is NOT in a consistent state [eventual consistency]");
         }
 
         // Shutdown system
@@ -170,97 +175,36 @@ public class Main {
     }
 
     /**
-     * Set up the main structure of the distributed cache, as a tree with:
-     * - a database
-     * - L1 caches communicating with the database
-     * - L2 caches communicating with L1 caches and clients
-     * - clients performing requests to L2 caches
+     * Method which asks the user to keep running the distributed cache
      *
-     * @param system The actor system in use
-     * @param db     The database containing some initial values
-     * @return A tree representing the complete architecture of the system
+     * @param time second passed so far
+     * @return boolean which states whether to continue or not
      */
-    private static Architecture setupStructure(ActorSystem system, Map<Integer, Integer> db) {
-        System.out.println("Creating tree structure...");
-        Logger.DEBUG.info("Creating the tree structure...");
-        Logger.DEBUG.info("Starting with " + Config.N_CLIENTS + " clients, " + Config.N_L1 + " caches having " +
-                Config.N_L2 + " associated caches each");
+    private static boolean askToContinue(Integer time) {
+        Scanner scan = new Scanner(System.in);
+        boolean answer = false;
+        boolean continuing = false;
 
-        // ids
-        int id = -1;
+        System.out.println(time + " seconds has passed, do you want to continue? [y/yes - n/no]");
 
-        // Create the database
-        ActorRef database = system.actorOf(Database.props(++id, db), "database-" + id);
+        do {
+            // Acquire answer
+            String input = scan.nextLine().trim().toLowerCase();
 
-        // Initialize a new Cache Tree
-        DistributedCacheTree cacheTree = new DistributedCacheTree(database);
-
-        // Initialize the arrays that will contain all the L1 and L2 caches
-        List<ActorRef> l1Caches = new ArrayList<>();
-        List<ActorRef> l2Caches = new ArrayList<>();
-
-        // Create N_L1 cache servers
-        for (int i = 0; i < Config.N_L1; i++) {
-            l1Caches.add(system.actorOf(Cache.props(++id, database, database), "l1-cache-" + i + "-" + id));
-        }
-        cacheTree.database.putAll(l1Caches);
-
-        // Create N_L2 cache servers
-        for (int i = 0; i < l1Caches.size(); i++) {
-            List<ActorRef> l2CachesTmp = new ArrayList<>();
-            for (int j = 0; j < Config.N_L2; j++) {
-                // Create the L2 cache server
-                ActorRef newL2 = system.actorOf(Cache.props(++id, l1Caches.get(i), database),
-                        "l2-cache-" + i + "-" + j + "-" + id);
-                l2CachesTmp.add(newL2);
-                cacheTree.database.children.get(i).put(newL2);
+            // Check the answer
+            if (input.equals("yes") || input.equals("y")) {
+                continuing = true;
+                answer = true;
+            } else if (input.equals("no") || input.equals("n")) {
+                continuing = false;
+                answer = true;
+            } else {
+                // Re-ask
+                System.out.println("Sorry, I could not understand what you have typed, do you want to continue? [y/yes - n/no]");
             }
+        } while (!answer);
 
-            // Send to the i-th l1 cache server its children
-            JoinCachesMessage l2CachesMsg = new JoinCachesMessage(l2CachesTmp);
-            l1Caches.get(i).tell(l2CachesMsg, ActorRef.noSender());
-
-            l2Caches.addAll(l2CachesTmp);
-        }
-
-        // Send to the database the list of L1 cache servers
-        JoinCachesMessage l1CachesMsg = new JoinCachesMessage(l1Caches);
-        database.tell(l1CachesMsg, ActorRef.noSender());
-
-        // Create N_CLIENTS clients
-        List<ActorRef> clients = new ArrayList<>();
-        for (int k = 0; k < Config.N_CLIENTS; k++) {
-            clients.add(system.actorOf(Client.props(++id), "client-" + k + "-" + id));
-
-            // Send the L2 cache servers to the generated client
-            JoinCachesMessage cachesMsg = new JoinCachesMessage(l2Caches);
-            clients.get(k).tell(cachesMsg, ActorRef.noSender());
-        }
-
-        Logger.DEBUG.info("Tree structure created");
-
-        return new Architecture(cacheTree, clients);
-    }
-
-    /**
-     * Initialize the database with random values
-     *
-     * @return The initialized database as a HashMap
-     */
-    private static Map<Integer, Integer> initializeDatabase() {
-        Map<Integer, Integer> db = new HashMap<>();
-        for (int i = 0; i < 100; i++) {
-            db.put(i, (int) (Math.random() * (100)));
-        }
-        return db;
-    }
-
-    public static void inputContinue() {
-        try {
-            System.out.println(">>> Press ENTER to continue <<<");
-            System.in.read();
-        } catch (IOException ignored) {
-        }
+        return continuing;
     }
 
     /**

@@ -16,9 +16,10 @@ class VerySimpleFormatter extends Formatter {
 
     /**
      * Format function
-     * @see java.util.logging.Formatter#format(java.util.logging.LogRecord)
+     *
      * @param record what to log
      * @return formatted string
+     * @see java.util.logging.Formatter#format(java.util.logging.LogRecord)
      */
     @Override
     public String format(LogRecord record) {
@@ -32,7 +33,7 @@ class VerySimpleFormatter extends Formatter {
  */
 public class Logger {
     /**
-     *  Debug Logger instance {@link java.util.logging.Logger logger}
+     * Debug Logger instance {@link java.util.logging.Logger logger}
      */
     public final static java.util.logging.Logger DEBUG = java.util.logging.Logger.getLogger(Main.class.getName());
     /**
@@ -101,8 +102,9 @@ public class Logger {
 
     /**
      * Method employed for logging the configuration.
-     * @param countL1 number of L1 caches
-     * @param countL2 number of L2 caches
+     *
+     * @param countL1      number of L1 caches
+     * @param countL2      number of L2 caches
      * @param countClients number of clients
      */
     public static void logConfig(int countL1, int countL2, int countClients) {
@@ -111,6 +113,7 @@ public class Logger {
 
     /**
      * Method employed for logging the database status
+     *
      * @param database database
      */
     public static void logDatabase(Map<Integer, Integer> database) {

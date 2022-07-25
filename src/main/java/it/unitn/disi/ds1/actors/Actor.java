@@ -100,8 +100,6 @@ public abstract class Actor extends AbstractActor {
 
                 p.tell(msg, getSelf());
 
-                // TODO: a crash could be possible here
-
                 // simulate network delays using sleep
                 try {
                     Thread.sleep(Config.RANDOM.nextInt(Config.NETWORK_DELAY_MS));
