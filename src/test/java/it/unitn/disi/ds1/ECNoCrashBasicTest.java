@@ -32,12 +32,14 @@ public class ECNoCrashBasicTest {
 
     @BeforeEach
     void resetState() {
+        // Clear the log file
+        Helper.clearLogFile("logs.txt");
+
+        // Re-initialize the logger
         Utils.initializeLogger();
         this.system = Utils.createActorSystem();
         this.database = Utils.createDatabase();
         this.architecture = Utils.createArchiteture(this.system, this.database, countL1, countL2, countClients);
-        // Clear the log file
-        Helper.clearLogFile("logs.txt");
         // Log config
         Logger.logConfig(this.countL1, this.countL2, this.countClients);
         Logger.logDatabase(this.database);
@@ -236,6 +238,37 @@ public class ECNoCrashBasicTest {
         assertTrue(Checker.check(), "Not consistent");
     }
 
+    @DisplayName("Testing a Read, CRITWRITE and CRITREAD on the same key")
+    @ParameterizedTest
+    @ValueSource(ints = {500}) // Milleseconds to wait
+    void testReadAndCritWriteAndCritRead(int timeToWait) {
+        assertTrue(this.database.size() > 0, "Database not initialized");
+        int keyToAskFor = (int) this.database.keySet().toArray()[0];
+
+        // Client 0 reads keyToAskFor
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, false, -1), ActorRef.noSender());
+
+        // Wait for the READ to finish
+        Utils.timeout(100);
+
+        // Client 0 performs a critwrite updating the value of keyToAskFor
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
+
+        // Wait for the WRITE to finish
+        Utils.timeout(300);
+
+        // Client 0 performs a CRITREAD again keyToAskFor
+        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, true, -1), ActorRef.noSender());
+
+        Utils.timeout(timeToWait);
+
+        // The second CRITREAD should return the latest value
+        assertTrue(Checker.check(), "Not consistent");
+    }
+
     @DisplayName("Testing a Read right after a CRITWRITE")
     @ParameterizedTest
     @ValueSource(ints = {500}) // Milleseconds to wait
@@ -252,6 +285,29 @@ public class ECNoCrashBasicTest {
         // Client 1 reads keyToAskFor
         this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
+
+        Utils.timeout(timeToWait);
+
+        // The read will return an error
+        assertTrue(Checker.check(), "Not consistent");
+    }
+
+    @DisplayName("Testing a CritRead right after a CRITWRITE")
+    @ParameterizedTest
+    @ValueSource(ints = {500}) // Milleseconds to wait
+    void testCritReadRightAfterCritwrite(int timeToWait) {
+        assertTrue(this.database.size() > 0, "Database not initialized");
+        int keyToAskFor = (int) this.database.keySet().toArray()[0];
+
+        // Client 0 performs a write updating the value of keyToAskFor
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
+
+        Utils.timeout(20);
+
+        // Client 1 reads keyToAskFor
+        this.architecture.clients.get(1).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, true, -1), ActorRef.noSender());
 
         Utils.timeout(timeToWait);
 

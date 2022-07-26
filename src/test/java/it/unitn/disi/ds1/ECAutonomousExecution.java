@@ -50,39 +50,24 @@ public class ECAutonomousExecution {
      */
     private static Stream<Arguments> provideParameters() {
         return Stream.of(
-                Arguments.of(100, 300, 20)
+                Arguments.of(100, 500, 20)
         );
     }
 
     @BeforeEach
     void resetState() {
+        // Clear the log file
+        Helper.clearLogFile("logs.txt");
+
+        // Re-initialize the logger
         Utils.initializeLogger();
+
         this.system = Utils.createActorSystem();
         this.database = Utils.createDatabase();
         this.architecture = Utils.createArchiteture(this.system, this.database, countL1, countL2, countClients);
-        // Clear the log file
-        Helper.clearLogFile("logs.txt");
         // Log config
         Logger.logConfig(this.countL1, this.countL2, this.countClients);
         Logger.logDatabase(this.database);
-    }
-
-    @DisplayName("Testing the READ functionality, crash L2 before read")
-    @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
-    void testReadCrashL2BeforeRead(int timeToWait) {
-        assertTrue(this.database.size() > 0, "Database not initialized");
-
-        CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_READ);
-        architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
-
-        int keyToAskFor = (int) this.database.keySet().toArray()[0];
-        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
-                null, false, -1), ActorRef.noSender());
-
-        Utils.timeout(timeToWait);
-
-        assertTrue(Checker.check(), "Not consistent");
     }
 
     @DisplayName("Testing the the program with random message exchanges without crashes for 5 times")
@@ -90,7 +75,7 @@ public class ECAutonomousExecution {
     void testMultipleRunWithoutCrash() {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
-        int maxTimeToWait = 300;
+        int maxTimeToWait = 1000;
         int minTimeToWait = 100;
 
         // Perform this.numberOfIterations iterations
@@ -109,11 +94,11 @@ public class ECAutonomousExecution {
     }
 
     @DisplayName("Testing the the program with random message exchanges with crashes for 5 times")
-    @RepeatedTest(value = 5, name = "Repeat testMultipleRunWithoutCrash {currentRepetition} of {totalRepetitions}")
+    @RepeatedTest(value = 5, name = "Repeat testMultipleRunWithCrash {currentRepetition} of {totalRepetitions}")
     void testMultipleRunWithCrash() {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
-        int maxTimeToWait = 300;
+        int maxTimeToWait = 600;
         int minTimeToWait = 100;
         float crashProbability = (float) 0.05;
 
@@ -136,7 +121,7 @@ public class ECAutonomousExecution {
     @DisplayName("Testing the the program with random message exchanges without crashes for some seconds")
     @ParameterizedTest
     @MethodSource("provideParameters")
-    void testRandomActionForPredefinitetTimeNoCrash(int minTimeToWait, int maxTimeToWait, int durationSeconds) {
+    void testRandomActionForPredefinedTimeNoCrash(int minTimeToWait, int maxTimeToWait, int durationSeconds) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
         float crashProbability = (float) 0.05;

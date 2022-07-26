@@ -33,12 +33,15 @@ public class ECCrashBasicTest {
 
     @BeforeEach
     void resetState() {
+        // Clear the log file
+        Helper.clearLogFile("logs.txt");
+
+        // Re-initialize the logger
         Utils.initializeLogger();
+
         this.system = Utils.createActorSystem();
         this.database = Utils.createDatabase();
         this.architecture = Utils.createArchiteture(this.system, this.database, countL1, countL2, countClients);
-        // Clear the log file
-        Helper.clearLogFile("logs.txt");
         // Log config
         Logger.logConfig(this.countL1, this.countL2, this.countClients);
         Logger.logDatabase(this.database);
@@ -521,6 +524,106 @@ public class ECCrashBasicTest {
 
         this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
                 null, false, -1), ActorRef.noSender());
+
+        Utils.timeout(timeToWait);
+
+        // The last read should return the new value of the last write
+        assertTrue(Checker.check(), "Not consistent");
+    }
+
+    @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L2 before CRITWRITE")
+    @ParameterizedTest
+    @ValueSource(ints = {2000}) // Milleseconds to wait
+    void testCritwriteAndCritReadCrashL2BeforeCritwrite(int timeToWait) {
+        assertTrue(this.database.size() > 0, "Database not initialized");
+        int keyToAskFor = (int) this.database.keySet().toArray()[0];
+
+        CrashMessage crash = new CrashMessage(Config.CrashType.L2_BEFORE_CRIT_WRITE);
+        architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
+
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
+
+        // Wait for the WRITE to finish
+        Utils.timeout(300);
+
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, true, -1), ActorRef.noSender());
+
+        Utils.timeout(timeToWait);
+
+        // The last read should return the new value of the last write
+        assertTrue(Checker.check(), "Not consistent");
+    }
+
+    @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L2 after CRITWRITE")
+    @ParameterizedTest
+    @ValueSource(ints = {2000}) // Milleseconds to wait
+    void testCritwriteAndCritReadCrashL2AfterCritwrite(int timeToWait) {
+        assertTrue(this.database.size() > 0, "Database not initialized");
+        int keyToAskFor = (int) this.database.keySet().toArray()[0];
+
+        CrashMessage crash = new CrashMessage(Config.CrashType.L2_AFTER_CRIT_WRITE);
+        architecture.cacheTree.database.children.get(0).children.get(0).actor.tell(crash, ActorRef.noSender());
+
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
+
+        // Wait for the WRITE to finish
+        Utils.timeout(300);
+
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, true, -1), ActorRef.noSender());
+
+        Utils.timeout(timeToWait);
+
+        // The last read should return the new value of the last write
+        assertTrue(Checker.check(), "Not consistent");
+    }
+
+    @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L1 before CRITWRITE")
+    @ParameterizedTest
+    @ValueSource(ints = {2000}) // Milleseconds to wait
+    void testCritwriteAndCritReadCrashL1BeforeCritwrite(int timeToWait) {
+        assertTrue(this.database.size() > 0, "Database not initialized");
+        int keyToAskFor = (int) this.database.keySet().toArray()[0];
+
+        CrashMessage crash = new CrashMessage(Config.CrashType.L1_BEFORE_CRIT_WRITE);
+        architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
+
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
+
+        // Wait for the WRITE to finish
+        Utils.timeout(300);
+
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, true, -1), ActorRef.noSender());
+
+        Utils.timeout(timeToWait);
+
+        // The last read should return the new value of the last write
+        assertTrue(Checker.check(), "Not consistent");
+    }
+
+    @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L1 after CRITWRITE")
+    @ParameterizedTest
+    @ValueSource(ints = {2000}) // Milleseconds to wait
+    void testCritwriteAndCritReadCrashL1AfterCritwrite(int timeToWait) {
+        assertTrue(this.database.size() > 0, "Database not initialized");
+        int keyToAskFor = (int) this.database.keySet().toArray()[0];
+
+        CrashMessage crash = new CrashMessage(Config.CrashType.L1_AFTER_CRIT_WRITE);
+        architecture.cacheTree.database.children.get(0).actor.tell(crash, ActorRef.noSender());
+
+        this.architecture.clients.get(0).tell(new WriteMessage(keyToAskFor, 5, new ArrayList<>(),
+                null, true), ActorRef.noSender());
+
+        // Wait for the WRITE to finish
+        Utils.timeout(300);
+
+        this.architecture.clients.get(0).tell(new ReadMessage(keyToAskFor, new ArrayList<>(),
+                null, true, -1), ActorRef.noSender());
 
         Utils.timeout(timeToWait);
 

@@ -36,12 +36,15 @@ public class ECNoCrashTest {
 
     @BeforeEach
     void resetState() {
+        // Clear the log file
+        Helper.clearLogFile("logs.txt");
+
+        // Re-initialize the logger
         Utils.initializeLogger();
+
         this.system = Utils.createActorSystem();
         this.database = Utils.createDatabase();
         this.architecture = Utils.createArchiteture(this.system, this.database, countL1, countL2, countClients);
-        // Clear the log file
-        Helper.clearLogFile("logs.txt");
         // Log config
         Logger.logConfig(countL1, countL2, countClients);
         Logger.logDatabase(this.database);
