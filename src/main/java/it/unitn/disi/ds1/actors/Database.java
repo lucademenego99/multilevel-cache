@@ -4,9 +4,27 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.Logger;
-import it.unitn.disi.ds1.messages.*;
+import it.unitn.disi.ds1.messages.CriticalUpdateMessage;
+import it.unitn.disi.ds1.messages.CriticalUpdateResponseMessage;
+import it.unitn.disi.ds1.messages.CriticalUpdateTimeoutMessage;
+import it.unitn.disi.ds1.messages.CriticalWriteResponseMessage;
+import it.unitn.disi.ds1.messages.JoinCachesMessage;
+import it.unitn.disi.ds1.messages.ReadMessage;
+import it.unitn.disi.ds1.messages.RecoveryMessage;
+import it.unitn.disi.ds1.messages.ResponseMessage;
+import it.unitn.disi.ds1.messages.StartSnapshotMessage;
+import it.unitn.disi.ds1.messages.TimeoutMessage;
+import it.unitn.disi.ds1.messages.TokenMessage;
+import it.unitn.disi.ds1.messages.WriteMessage;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Level;
 
 /**
@@ -237,7 +255,7 @@ public class Database extends Actor {
     /**
      * On timeout abort if the request has not ended
      *
-     * @param msg
+     * @param msg critical update message
      */
     protected void onCriticalUpdateTimeoutMessage(CriticalUpdateTimeoutMessage msg) {
         // Abort
@@ -261,7 +279,7 @@ public class Database extends Actor {
     }
 
     /**
-     * Collects the acknoledgment from the caches:
+     * Collects the acknowledgment from the caches:
      * CriticalUpdateResponseMessage -> Config.CUResponse.OK
      * If all agree -> commit, if someone does not -> ABORT
      * The Commit and Abort messages are CriticalWriteResponseMessage
@@ -346,20 +364,26 @@ public class Database extends Actor {
         this.receivedAcksForCritWrite.remove(requestId);
     }
 
+    /**
+     * Empty function, this operation is not supported by the Database
+     *
+     * @param msg on response message
+     */
     @Override
     protected void onResponseMessage(ResponseMessage msg) {
     }
 
-    ;
-
+    /**
+     * Empty function, this operation is not supported by the Database
+     *
+     * @param msg on timeout message
+     */
     @Override
     protected void onTimeoutMessage(TimeoutMessage msg) {
     }
 
-    ;
-
     /**
-     * Handler of the Recovery message
+     * Empty function, this operation is not supported by the Database
      *
      * @param msg recovery message
      */

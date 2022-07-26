@@ -4,7 +4,13 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.Logger;
-import it.unitn.disi.ds1.messages.*;
+import it.unitn.disi.ds1.messages.JoinCachesMessage;
+import it.unitn.disi.ds1.messages.Message;
+import it.unitn.disi.ds1.messages.ReadMessage;
+import it.unitn.disi.ds1.messages.RecoveryMessage;
+import it.unitn.disi.ds1.messages.ResponseMessage;
+import it.unitn.disi.ds1.messages.TimeoutMessage;
+import it.unitn.disi.ds1.messages.WriteMessage;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -270,6 +276,11 @@ public class Client extends Actor {
         }
     }
 
+    /**
+     * Create receive method
+     *
+     * @return receiveBuilder
+     */
     @Override
     public Receive createReceive() {
         return receiveBuilder()

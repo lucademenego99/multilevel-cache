@@ -2,7 +2,13 @@ package it.unitn.disi.ds1;
 
 import akka.actor.ActorSystem;
 import it.unitn.disi.ds1.structures.Architecture;
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -27,9 +33,10 @@ public class Main {
         int secondsForIteration = 20;
 
         /**
-         * Command line parser
+         * Command line parser and helper
          */
         CommandLineParser cmdLineParser = new DefaultParser();
+        HelpFormatter helper = new HelpFormatter();
 
         Options options = new Options();
         options.addOption(Option.builder().
@@ -37,7 +44,7 @@ public class Main {
                 .argName("Number of l1 caches")
                 .hasArg(true)
                 .desc("Number of L1 caches which will be present in the hierarchical distributed cache")
-                .type(Integer.class)
+                .type(Number.class)
                 .build()
         );
 
@@ -46,7 +53,7 @@ public class Main {
                 .argName("Number of l2 caches")
                 .hasArg(true)
                 .desc("Number of L2 caches which will be present in the hierarchical distributed cache")
-                .type(Integer.class)
+                .type(Number.class)
                 .build()
         );
 
@@ -55,7 +62,7 @@ public class Main {
                 .argName("Number of clients")
                 .hasArg(true)
                 .desc("Number of clients connected to the hierarchical distributed cache")
-                .type(Integer.class)
+                .type(Number.class)
                 .build()
         );
 
@@ -64,7 +71,7 @@ public class Main {
                 .argName("Number of seconds per iteration")
                 .hasArg(true)
                 .desc("Number of seconds each iteration takes")
-                .type(Integer.class)
+                .type(Number.class)
                 .build()
         );
 
@@ -74,32 +81,39 @@ public class Main {
         try {
             CommandLine cmdLine = cmdLineParser.parse(options, args);
 
-            if (cmdLine.hasOption("l1") && (Integer) cmdLine.getParsedOptionValue("l1") > 0) {
-                countL1 = (Integer) cmdLine.getParsedOptionValue("l1");
+            // Help command
+            if (cmdLine.hasOption('h') || cmdLine.hasOption("help")) {
+                helper.printHelp("Multilevel cache", options, true);
+                System.exit(0);
+            }
+
+            if (cmdLine.hasOption("l1") && ((Number) cmdLine.getParsedOptionValue("l1")).intValue() > 0) {
+                countL1 = ((Number) cmdLine.getParsedOptionValue("l1")).intValue();
             } else {
                 System.out.println("l1 argument not found or invalid, using default: " + countL1);
             }
 
-            if (cmdLine.hasOption("l2") && (Integer) cmdLine.getParsedOptionValue("l2") > 0) {
-                countL2 = (Integer) cmdLine.getParsedOptionValue("l2");
+            if (cmdLine.hasOption("l2") && ((Number) cmdLine.getParsedOptionValue("l2")).intValue() > 0) {
+                countL2 = ((Number) cmdLine.getParsedOptionValue("l2")).intValue();
             } else {
                 System.out.println("l2 argument not found or invalid, using default: " + countL2);
             }
 
-            if (cmdLine.hasOption("clients") && (Integer) cmdLine.getParsedOptionValue("clients") > 0) {
-                countClients = (Integer) cmdLine.getParsedOptionValue("clients");
+            if (cmdLine.hasOption("clients") && ((Number) cmdLine.getParsedOptionValue("clients")).intValue() > 0) {
+                countClients = ((Number) cmdLine.getParsedOptionValue("clients")).intValue();
             } else {
                 System.out.println("clients argument not found or invalid, using default: " + countClients);
             }
 
-            if (cmdLine.hasOption("seconds") && (Integer) cmdLine.getParsedOptionValue("seconds") > 0) {
-                secondsForIteration = (Integer) cmdLine.getParsedOptionValue("seconds");
+            if (cmdLine.hasOption("seconds") && ((Number) cmdLine.getParsedOptionValue("seconds")).intValue() > 0) {
+                secondsForIteration = ((Number) cmdLine.getParsedOptionValue("seconds")).intValue();
             } else {
                 System.out.println("seconds argument not found or invalid, using default: " + secondsForIteration);
             }
         } catch (ParseException e) {
-            e.printStackTrace();
-            System.exit(1);
+            System.out.println(e.getMessage());
+            helper.printHelp("Usage:", options);
+            System.exit(0);
         }
 
         /**

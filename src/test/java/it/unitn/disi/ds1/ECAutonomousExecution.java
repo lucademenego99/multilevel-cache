@@ -86,7 +86,7 @@ public class ECAutonomousExecution {
     }
 
     @DisplayName("Testing the the program with random message exchanges without crashes for 5 times")
-    @RepeatedTest(value = 5, name = "Repeat testMultipleRunWithoutCrash {currentRepetition} of {totalRepetition}")
+    @RepeatedTest(value = 5, name = "Repeat testMultipleRunWithoutCrash {currentRepetition} of {totalRepetitions}")
     void testMultipleRunWithoutCrash() {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -109,7 +109,7 @@ public class ECAutonomousExecution {
     }
 
     @DisplayName("Testing the the program with random message exchanges with crashes for 5 times")
-    @RepeatedTest(value = 5, name = "Repeat testMultipleRunWithoutCrash {currentRepetition} of {totalRepetition}")
+    @RepeatedTest(value = 5, name = "Repeat testMultipleRunWithoutCrash {currentRepetition} of {totalRepetitions}")
     void testMultipleRunWithCrash() {
         assertTrue(this.database.size() > 0, "Database not initialized");
 

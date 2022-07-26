@@ -4,9 +4,29 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import it.unitn.disi.ds1.Config;
 import it.unitn.disi.ds1.Logger;
-import it.unitn.disi.ds1.messages.*;
+import it.unitn.disi.ds1.messages.CrashMessage;
+import it.unitn.disi.ds1.messages.CriticalUpdateMessage;
+import it.unitn.disi.ds1.messages.CriticalUpdateResponseMessage;
+import it.unitn.disi.ds1.messages.CriticalUpdateTimeoutMessage;
+import it.unitn.disi.ds1.messages.CriticalWriteResponseMessage;
+import it.unitn.disi.ds1.messages.FlushMessage;
+import it.unitn.disi.ds1.messages.JoinCachesMessage;
+import it.unitn.disi.ds1.messages.Message;
+import it.unitn.disi.ds1.messages.ReadMessage;
+import it.unitn.disi.ds1.messages.RecoveryMessage;
+import it.unitn.disi.ds1.messages.ResponseMessage;
+import it.unitn.disi.ds1.messages.TimeoutMessage;
+import it.unitn.disi.ds1.messages.TokenMessage;
+import it.unitn.disi.ds1.messages.WriteMessage;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -534,6 +554,13 @@ public class Cache extends Actor {
         }
     }
 
+    /**
+     * Handler of critical update message
+     * L1 caches send the new value to L2 caches
+     * L2 caches sends OK message to L1 caches
+     *
+     * @param msg CriticalUpdateMessage
+     */
     protected void onCriticalUpdateMessage(CriticalUpdateMessage msg) {
         // Locking the value
         this.criticalSessionKey.put(msg.queryUUID, msg.updatedKey);
@@ -591,6 +618,12 @@ public class Cache extends Actor {
         }
     }
 
+    /**
+     * Critical update message timeout
+     * Tell NO in order to make the cache abort
+     *
+     * @param msg CriticalUpdateTimeoutMessage
+     */
     protected void onCriticalUpdateTimeoutMessage(CriticalUpdateTimeoutMessage msg) {
         /**
          * Remember that the timeout is started from the database which is waiting for a response
@@ -610,6 +643,14 @@ public class Cache extends Actor {
         this.parent.tell(new CriticalUpdateResponseMessage(Config.CUResponse.NO, msg.queryUUID, msg.hops), getSelf());
     }
 
+    /**
+     * Critical Update Response Message handler
+     *
+     * L1 cache tells Ok to the parent if they got all ok from all L2
+     * L1 cache tells No to the parent if at least a no is received
+     *
+     * @param msg CriticalUpdateResponseMessage
+     */
     protected void onCriticalUpdateResponseMessage(CriticalUpdateResponseMessage msg) {
         Integer key = this.criticalSessionKey.get(msg.queryUUID);
         Integer value = this.criticalKeyValue.get(key);
@@ -651,6 +692,13 @@ public class Cache extends Actor {
         }
     }
 
+    /**
+     * Critical Write Response Message handler
+     *
+     * L1 cache forwards COMMIT or ABORT decisions to L2 caches
+     *
+     * @param msg CriticalWriteResponseMessage
+     */
     protected void onCriticalWriteResponseMessage(CriticalWriteResponseMessage msg) {
         if (!this.criticalSessionKey.containsKey(msg.queryUUID)) {
             return;

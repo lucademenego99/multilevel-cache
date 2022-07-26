@@ -5,12 +5,20 @@ import akka.actor.ActorSystem;
 import it.unitn.disi.ds1.actors.Cache;
 import it.unitn.disi.ds1.actors.Client;
 import it.unitn.disi.ds1.actors.Database;
-import it.unitn.disi.ds1.messages.*;
+import it.unitn.disi.ds1.messages.CrashMessage;
+import it.unitn.disi.ds1.messages.JoinCachesMessage;
+import it.unitn.disi.ds1.messages.Message;
+import it.unitn.disi.ds1.messages.ReadMessage;
+import it.unitn.disi.ds1.messages.WriteMessage;
 import it.unitn.disi.ds1.structures.Architecture;
 import it.unitn.disi.ds1.structures.DistributedCacheTree;
 import scala.concurrent.duration.Duration;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 public class Utils {
@@ -170,6 +178,18 @@ public class Utils {
             case L1_BEFORE_READ:
             case L1_BEFORE_RESPONSE:
             case L1_BEFORE_WRITE:
+            case L1_BEFORE_ABORT_MULTICAST:
+            case L1_AFTER_ABORT_MULTICAST:
+            case L1_DOING_ABORT_MULTICAST:
+            case L1_BEFORE_WRITEVALUE_MULTICAST:
+            case L1_AFTER_WRITEVALUE_MULTICAST:
+            case L1_DOING_WRITEVALUE_MULTICAST:
+            case L1_BEFORE_COMMIT_MULTICAST:
+            case L1_AFTER_COMMIT_MULTICAST:
+            case L1_DOING_COMMIT_MULTICAST:
+            case L1_BEFORE_CRITICALUPDATE_MULTICAST:
+            case L1_AFTER_CRITICALUPDATE_MULTICAST:
+            case L1_DOING_CRITICALUPDATE_MULTICAST:
                 // Select random L1 cache
                 int randomCache = randInt(0, architecture.cacheTree.database.children.toArray().length - 1);
                 // Schedule the crash
@@ -269,11 +289,15 @@ public class Utils {
         }
     }
 
-
     /**
      * Random action to take, it includes both crashes and message
      *
-     * @param upperBoundMilliseconds
+     * @param system actor system
+     * @param architecture architecture
+     * @param database database
+     * @param lowerBoundMilliseconds lower-bound milliseconds
+     * @param upperBoundMilliseconds upper-bound milliseconds
+     * @param crashProbability probability of a crash
      */
     public static void randomAction(ActorSystem system, Architecture architecture, Map<Integer, Integer> database,
                                     Integer lowerBoundMilliseconds, Integer upperBoundMilliseconds,

@@ -3,10 +3,11 @@ FROM gradle:7.4.0-jdk8 AS build
 # run as gradle user 
 COPY --chown=gradle:gradle . /home/gradle/src
 WORKDIR /home/gradle/src
-RUN gradle build
+RUN gradle build -x test
 
 # ===== Run the application =====
 FROM openjdk:8-jre-slim
+# Working directory
 WORKDIR /app
 # Copy the built artifacts
 COPY --from=build /home/gradle/src/build/libs/*.jar /app/main.jar
