@@ -99,10 +99,12 @@ public class Checker {
                                 requests.put(logCheck.uuid, logCheck);
                             }
 
-                            // If there is already a CRITWRITE on this key
-                            if (handledCritWrites.contains(logCheck.key)) {
-                                System.out.println("There should be an error due to a CRITWRITE being handled for key " + logCheck.key + " and uuid " + logCheck.uuid);
-                                errorsDueToCritWrites.add(logCheck.uuid);
+                            if (logCheck.receiver == 0) {
+                                // If there is already a CRITWRITE on this key
+                                if (handledCritWrites.contains(logCheck.key)) {
+                                    System.out.println("There should be an error due to a CRITWRITE being handled for key " + logCheck.key + " and uuid " + logCheck.uuid);
+                                    errorsDueToCritWrites.add(logCheck.uuid);
+                                }
                             }
 
                             if (logCheck.receiver == 0 && logCheck.requestType == Config.RequestType.CRITWRITE) {

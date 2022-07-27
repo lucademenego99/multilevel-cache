@@ -120,7 +120,7 @@ public class Client extends Actor {
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
 
         // Schedule the timer for a possible timeout
-        this.scheduleTimer(new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
+        this.scheduleTimer(new TimeoutMessage(newRequest, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
     }
 
     /**
@@ -160,7 +160,7 @@ public class Client extends Actor {
 
         // Schedule the timer for a possible timeout
         this.scheduleTimer(
-                new TimeoutMessage(msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID
+                new TimeoutMessage(newRequest, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID
         );
     }
 
@@ -190,12 +190,14 @@ public class Client extends Actor {
         int newSeqno = -1;
         Message newMessage = null;
         String type = "-1";
+        UUID oldUUID = null;
         Config.RequestType reqType = Config.RequestType.READ;
         boolean critical = false;
         // Recreate the message which should be sent to a new cache
         if (msg.msg instanceof ReadMessage) {
             requestKey = ((ReadMessage) (msg.msg)).requestKey;
             newSeqno = ((ReadMessage) (msg.msg)).seqno;
+            oldUUID = ((ReadMessage) (msg.msg)).queryUUID;
             newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), requestUUID, ((ReadMessage) msg.msg).isCritical, newSeqno);
             critical = ((ReadMessage) msg.msg).isCritical;
             reqType = critical ? Config.RequestType.CRITREAD : Config.RequestType.READ;
@@ -204,10 +206,18 @@ public class Client extends Actor {
             requestKey = ((WriteMessage) (msg.msg)).requestKey;
             modifiedValue = ((WriteMessage) (msg.msg)).modifiedValue;
             critical = ((WriteMessage) (msg.msg)).isCritical;
+            oldUUID = ((WriteMessage) (msg.msg)).queryUUID;
             reqType = critical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE;
             newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), requestUUID, critical);
             type = "write";
         }
+
+        // If the timeout scheduler doesn't contain the oldUUID, it means we cancelled the timer. We can return
+        if (!this.timeoutScheduler.containsKey(oldUUID)) {
+            this.shouldReceiveResponse = false;
+            return;
+        }
+        this.timeoutScheduler.remove(oldUUID);
 
         Logger.DEBUG.info(getSelf().path().name() + " is sending a " + type +
                 " request to another cache for key " + requestKey + " to " +
@@ -220,11 +230,14 @@ public class Client extends Actor {
 
         // Network delay
         this.delay();
+
         // Forward the message to a new cache
         this.caches.get(cacheToAskTo).tell(newMessage, getSelf());
 
         // TODO: Put check if it's ReadMessage or WriteMessage
-        this.requestUUID = UUID.randomUUID();
+
+        // TODO: I have commented the next line, I don't think we need it because we generate the UUID above
+        // this.requestUUID = UUID.randomUUID();
         // Schedule the timer
         this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
     }

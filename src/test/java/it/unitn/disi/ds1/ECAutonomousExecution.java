@@ -75,7 +75,7 @@ public class ECAutonomousExecution {
     void testMultipleRunWithoutCrash() {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
-        int maxTimeToWait = 1000;
+        int maxTimeToWait = 600;
         int minTimeToWait = 100;
 
         // Perform this.numberOfIterations iterations

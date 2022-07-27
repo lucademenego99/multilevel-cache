@@ -168,6 +168,9 @@ public class Main {
             // Small timeout
             Utils.timeout(maxTimeToWait * 2);
 
+            // TODO do we need this?
+            Utils.timeout(5000);
+
             // Ask for repetition
             repeat = askToContinue(timePassedInSeconds);
 
