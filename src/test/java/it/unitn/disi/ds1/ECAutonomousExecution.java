@@ -1,9 +1,6 @@
 package it.unitn.disi.ds1;
 
-import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import it.unitn.disi.ds1.messages.CrashMessage;
-import it.unitn.disi.ds1.messages.ReadMessage;
 import it.unitn.disi.ds1.structures.Architecture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,11 +8,9 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -25,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for the following setting:
  * - crashes and no crashes
  * - random actions/messages exchange
+ *
+ * It runs the program either for a given number of iteration (messages) or for some seconds
  */
 public class ECAutonomousExecution {
     /**

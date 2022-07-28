@@ -120,7 +120,8 @@ public class Client extends Actor {
         this.caches.get(cacheToAskTo).tell(newRequest, getSelf());
 
         // Schedule the timer for a possible timeout
-        this.scheduleTimer(new TimeoutMessage(newRequest, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
+        this.scheduleTimer(new TimeoutMessage(newRequest, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT,
+                this.requestUUID);
     }
 
     /**
@@ -195,7 +196,8 @@ public class Client extends Actor {
             requestKey = ((ReadMessage) (msg.msg)).requestKey;
             newSeqno = ((ReadMessage) (msg.msg)).seqno;
             oldUUID = ((ReadMessage) (msg.msg)).queryUUID;
-            newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), requestUUID, ((ReadMessage) msg.msg).isCritical, newSeqno);
+            newMessage = new ReadMessage(requestKey, Collections.singletonList(getSelf()), requestUUID,
+                    ((ReadMessage) msg.msg).isCritical, newSeqno);
             critical = ((ReadMessage) msg.msg).isCritical;
             reqType = critical ? Config.RequestType.CRITREAD : Config.RequestType.READ;
             type = "read [CRITICAL] = " + critical + " [seqno] = " + newSeqno;
@@ -205,7 +207,8 @@ public class Client extends Actor {
             critical = ((WriteMessage) (msg.msg)).isCritical;
             oldUUID = ((WriteMessage) (msg.msg)).queryUUID;
             reqType = critical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE;
-            newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), requestUUID, critical);
+            newMessage = new WriteMessage(requestKey, modifiedValue, Collections.singletonList(getSelf()), requestUUID,
+                    critical);
             type = "write";
         }
 
@@ -232,7 +235,8 @@ public class Client extends Actor {
         this.caches.get(cacheToAskTo).tell(newMessage, getSelf());
 
         // Schedule the timer
-        this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
+        this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT,
+                this.requestUUID);
     }
 
     /**
@@ -243,8 +247,6 @@ public class Client extends Actor {
     @Override
     protected void onRecoveryMessage(RecoveryMessage msg) {
     }
-
-    ;
 
     /**
      * Handler of the ResponseMessage

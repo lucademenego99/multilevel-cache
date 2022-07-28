@@ -10,9 +10,13 @@ import java.util.List;
  * - {@link it.unitn.disi.ds1.actors.Client database}
  */
 public class Architecture {
-    // Tree of caches
+    /**
+     * Tree of caches
+     */
     public DistributedCacheTree cacheTree;
-    // List of clients
+    /**
+     * List of clients
+     */
     public List<ActorRef> clients;
 
     /**

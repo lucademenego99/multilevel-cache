@@ -52,7 +52,8 @@ public class ECNoCrashTest {
 
     @DisplayName("Testing various READs and WRITEs")
     @ParameterizedTest
-    @ValueSource(ints = {3000}) // Milleseconds to wait
+    @ValueSource(ints = {3000})
+        // Milleseconds to wait
     void testVariousReadsAndWrites(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -92,7 +93,8 @@ public class ECNoCrashTest {
 
     @DisplayName("Testing various READs and CRITWRITESs")
     @ParameterizedTest
-    @ValueSource(ints = {3000}) // Milleseconds to wait
+    @ValueSource(ints = {3000})
+        // Milleseconds to wait
     void testVariousReadsAndCritwrites(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -132,7 +134,8 @@ public class ECNoCrashTest {
 
     @DisplayName("Testing various CRITREADs and WRITESs")
     @ParameterizedTest
-    @ValueSource(ints = {3000}) // Milleseconds to wait
+    @ValueSource(ints = {3000})
+        // Milleseconds to wait
     void testVariousCritreadsAndWrites(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -172,7 +175,8 @@ public class ECNoCrashTest {
 
     @DisplayName("Testing various CRITREADs and CRITWRITESs")
     @ParameterizedTest
-    @ValueSource(ints = {3000}) // Milleseconds to wait
+    @ValueSource(ints = {3000})
+        // Milleseconds to wait
     void testVariousOperations(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 

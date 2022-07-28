@@ -49,7 +49,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing the READ functionality, crash L2 before read")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testReadCrashL2BeforeRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -67,7 +68,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing the READ functionality, crash L2 after read")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testReadCrashL2AfterRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -104,7 +106,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing the READ functionality, crash L1 after read")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testReadCrashL1AfterRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -122,7 +125,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing the WRITE functionality, crash L2 before write")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteCrashL2BeforeWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -159,7 +163,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing the WRITE functionality, crash L1 before write")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteCrashL1BeforeWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -177,7 +182,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing the WRITE functionality, crash L1 after write")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteCrashL1AfterWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
 
@@ -221,7 +227,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a WRITE on the same key, crash L2 after READ")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteAndReadCrashL2AfterRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -246,7 +253,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a WRITE on the same key, crash L1 before READ")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteAndReadCrashL1BeforeRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -271,7 +279,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a WRITE on the same key, crash L1 after READ")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testWriteAndReadCrashL1AfterRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -296,7 +305,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a WRITE on the same key, crash L2 before WRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testWriteAndReadCrashL2BeforeWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -321,7 +331,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a WRITE on the same key, crash L1 before WRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testWriteAndReadCrashL1BeforeWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -346,7 +357,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a Read, Write and Read on the same key, crash L2 after WRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testReadAndWriteAndReadCrashL2AfterWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -380,7 +392,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a Read, Write and Read on the same key, crash L1 after WRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testReadAndWriteAndReadCrashL1AfterWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -414,7 +427,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a CRITWRITE with an L2 crash after it")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testCritwriteCrashL2AfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -433,7 +447,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L2 before CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testCritwriteAndReadCrashL2BeforeCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -458,7 +473,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L2 after CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testCritwriteAndReadCrashL2AfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -483,7 +499,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L1 before CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testCritwriteAndReadCrashL1BeforeCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -508,7 +525,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key, crash L1 after CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testCritwriteAndReadCrashL1AfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -533,7 +551,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L2 before CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testCritwriteAndCritReadCrashL2BeforeCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -558,7 +577,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L2 after CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testCritwriteAndCritReadCrashL2AfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -583,7 +603,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L1 before CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testCritwriteAndCritReadCrashL1BeforeCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -608,7 +629,8 @@ public class ECCrashBasicTest {
 
     @DisplayName("Testing a CRITREAD after a CRITWRITE on the same key, crash L1 after CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {2000}) // Milleseconds to wait
+    @ValueSource(ints = {2000})
+        // Milleseconds to wait
     void testCritwriteAndCritReadCrashL1AfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];

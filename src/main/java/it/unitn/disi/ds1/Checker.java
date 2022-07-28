@@ -4,10 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -109,12 +107,14 @@ public class Checker {
                                             // The returned value should be consistent with what the caches had,
                                             // or with the value contained by the database if the key was not in the cache
                                             if (cachesState.get(logCheck.sender).containsKey(original.key)) {
-                                                if (!Objects.equals(cachesState.get(logCheck.sender).get(original.key), logCheck.value)) {
+                                                if (!Objects.equals(cachesState.get(logCheck.sender).get(original.key),
+                                                        logCheck.value)) {
                                                     System.err.println("Not consistent - the read returned a wrong value");
                                                     return false;
                                                 }
                                             } else if (cachesState.get(parentOf.get(logCheck.sender)).containsKey(original.key)) {
-                                                if (!Objects.equals(cachesState.get(parentOf.get(logCheck.sender)).get(original.key), logCheck.value)) {
+                                                if (!Objects.equals(cachesState.get(parentOf.get(logCheck.sender)).get(original.key),
+                                                        logCheck.value)) {
                                                     System.err.println("Not consistent - the read returned a wrong value");
                                                     return false;
                                                 }
@@ -145,7 +145,8 @@ public class Checker {
                                 if (logCheck.value == null) {
                                     // There was an error
                                 } else {
-                                    if (original.requestType == Config.RequestType.WRITE || original.requestType == Config.RequestType.CRITWRITE) {
+                                    if (original.requestType == Config.RequestType.WRITE ||
+                                            original.requestType == Config.RequestType.CRITWRITE) {
                                         // We have to check if the returned value is correct
                                         if (logCheck.sender == 0) {
                                             // The sender is the database, update the value
@@ -163,7 +164,8 @@ public class Checker {
                                                 cachesState.get(logCheck.receiver).put(original.key, logCheck.value);
                                             }
                                         }
-                                    } else if (original.requestType == Config.RequestType.READ || original.requestType == Config.RequestType.CRITREAD) {
+                                    } else if (original.requestType == Config.RequestType.READ ||
+                                            original.requestType == Config.RequestType.CRITREAD) {
                                         // Add in the cache's state the key-value pair
                                         cachesState.get(logCheck.receiver).remove(original.key);
                                         cachesState.get(logCheck.receiver).put(original.key, logCheck.value);

@@ -26,6 +26,7 @@ public class CrashMessage extends Message {
     public CrashMessage(Config.CrashType nextCrash) {
         this.nextCrash = nextCrash;
         // The last number is not included, thus we have to add 1
-        this.recoverIn = Config.RANDOM.nextInt(Config.MAX_RECOVERY_IN - Config.MIN_RECOVERY_IN + 1) + Config.MIN_RECOVERY_IN;
+        this.recoverIn = Config.RANDOM.nextInt(Config.MAX_RECOVERY_IN - Config.MIN_RECOVERY_IN + 1) +
+                Config.MIN_RECOVERY_IN;
     }
 }

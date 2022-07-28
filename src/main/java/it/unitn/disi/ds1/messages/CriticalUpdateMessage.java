@@ -11,6 +11,9 @@ import java.util.UUID;
  */
 public class CriticalUpdateMessage extends Message {
 
+    /**
+     * Value and Key of the critical update
+     */
     public final int updatedKey, updatedValue;
 
     /**

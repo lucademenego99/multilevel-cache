@@ -242,7 +242,7 @@ public class Utils {
         // Random client
         int randomClient = randInt(0, architecture.clients.size() - 1);
         // Key
-        int key = (int) database.keySet().toArray()[randInt(0, database.keySet().size()-1)];
+        int key = (int) database.keySet().toArray()[randInt(0, database.keySet().size() - 1)];
         // New value
         int newValue = randInt(0, 99);
         switch (message) {
@@ -292,12 +292,12 @@ public class Utils {
     /**
      * Random action to take, it includes both crashes and message
      *
-     * @param system actor system
-     * @param architecture architecture
-     * @param database database
+     * @param system                 actor system
+     * @param architecture           architecture
+     * @param database               database
      * @param lowerBoundMilliseconds lower-bound milliseconds
      * @param upperBoundMilliseconds upper-bound milliseconds
-     * @param crashProbability probability of a crash
+     * @param crashProbability       probability of a crash
      */
     public static void randomAction(ActorSystem system, Architecture architecture, Map<Integer, Integer> database,
                                     Integer lowerBoundMilliseconds, Integer upperBoundMilliseconds,

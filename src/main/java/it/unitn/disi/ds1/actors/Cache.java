@@ -88,7 +88,7 @@ public class Cache extends Actor {
     /**
      * Pending requests
      */
-    private HashMap<UUID, Message> pendingQueries;
+    private final HashMap<UUID, Message> pendingQueries;
     /**
      * Type of the next simulated crash
      */
@@ -196,13 +196,15 @@ public class Cache extends Actor {
     @Override
     protected void onReadMessage(ReadMessage msg) {
         // Check if the node should crash before read L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_READ) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_READ)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_READ) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_READ)) {
             this.crash(this.recoverIn);
             return;
         }
 
         // Check if the node should crash before CRITICAL read L1 and L2
-        if ((this.isL1 && msg.isCritical && this.nextCrash == Config.CrashType.L1_BEFORE_CRIT_READ) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_CRIT_READ)) {
+        if ((this.isL1 && msg.isCritical && this.nextCrash == Config.CrashType.L1_BEFORE_CRIT_READ) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_CRIT_READ)) {
             this.crash(this.recoverIn);
             return;
         }
@@ -311,13 +313,15 @@ public class Cache extends Actor {
         }
 
         // Check if the node should crash after CRITICAL read L1 and L2
-        if ((this.isL1 && msg.isCritical && this.nextCrash == Config.CrashType.L1_AFTER_CRIT_READ) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_CRIT_READ)) {
+        if ((this.isL1 && msg.isCritical && this.nextCrash == Config.CrashType.L1_AFTER_CRIT_READ) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_CRIT_READ)) {
             this.crash(this.recoverIn);
             return;
         }
 
         // Check if the node should crash after read L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_READ) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_READ)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_READ) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_READ)) {
             this.crash(this.recoverIn);
             return;
         }
@@ -335,7 +339,8 @@ public class Cache extends Actor {
     @Override
     protected void onResponseMessage(ResponseMessage msg) {
         // Check if the node should crash before response L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_RESPONSE) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_RESPONSE)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_RESPONSE) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_RESPONSE)) {
             this.crash(this.recoverIn);
             return;
         }
@@ -355,7 +360,8 @@ public class Cache extends Actor {
             int updatedKey = (Integer) msg.values.keySet().toArray()[0];
             Integer value = (Integer) msg.values.values().toArray()[0];
             // If it is a read, we should pull, if it is a write we are listening only if the value is contained in the cache
-            if (msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD || this.cachedDatabase.containsKey(updatedKey)) {
+            if (msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD ||
+                    this.cachedDatabase.containsKey(updatedKey)) {
                 // Update the value and the corresponding sequence number
                 Integer currentSeqno = this.seqnoCache.get(updatedKey);
                 currentSeqno = currentSeqno == null ? -1 : currentSeqno;
@@ -369,7 +375,7 @@ public class Cache extends Actor {
                     // Update cache
                     this.seqnoCache.remove(updatedKey);
                     this.seqnoCache.put(updatedKey, msg.seqno);
-                } else if(msg.requestType != Config.RequestType.READ && msg.requestType != Config.RequestType.CRITREAD) {
+                } else if (msg.requestType != Config.RequestType.READ && msg.requestType != Config.RequestType.CRITREAD) {
                     Logger.DEBUG.severe(getSelf().path().name() + ": not updating the cached value for key " +
                             updatedKey + " value: " + value + " since I got a bigger sequence number " + "current " +
                             currentSeqno + " > " + "received: " + msg.seqno + " current value: " +
@@ -402,12 +408,9 @@ public class Cache extends Actor {
             }
 
             // Whether it has to crash
-            boolean hasToCrash = false;
+            boolean hasToCrash = this.nextCrash == Config.CrashType.L1_DOING_WRITEVALUE_MULTICAST;
 
             // Check whether it has to crash
-            if (this.nextCrash == Config.CrashType.L1_DOING_WRITEVALUE_MULTICAST) {
-                hasToCrash = true;
-            }
             this.multicastAndCheck(newResponseMessage, this.caches, msg.requestType,
                     msg.values == null ? null : (int) msg.values.keySet().toArray()[0],
                     msg.values == null ? null : (int) msg.values.values().toArray()[0],
@@ -431,7 +434,8 @@ public class Cache extends Actor {
         // If the message is a READ, regardless of the cache type it sends only to the cache that have pulled the value (pulled the request)
         // Also for returning the WRITE answer to the client
         // Notice: the other L2 caches won't answer to the client because isPendingQuery resolves to false
-        if (isPendingQuery && (!this.isL1 || msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD)) {
+        if (isPendingQuery && (!this.isL1 || msg.requestType == Config.RequestType.READ ||
+                msg.requestType == Config.RequestType.CRITREAD)) {
             Logger.logCheck(Level.FINE, this.id, this.getIdFromName(sendTo.path().name()), msg.requestType,
                     true, msg.values == null ? null : (Integer) msg.values.keySet().toArray()[0],
                     msg.values == null ? null : (Integer) msg.values.values().toArray()[0], msg.seqno,
@@ -446,7 +450,8 @@ public class Cache extends Actor {
         }
 
         // Check if the node should crash after response L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_RESPONSE) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_RESPONSE)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_RESPONSE) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_RESPONSE)) {
             this.crash(this.recoverIn);
             return;
         }
@@ -462,13 +467,15 @@ public class Cache extends Actor {
     @Override
     protected void onWriteMessage(WriteMessage msg) {
         // Check if the node should crash after write L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_WRITE) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_WRITE)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_WRITE) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_WRITE)) {
             this.crash(this.recoverIn);
             return;
         }
 
         // Check if the node should crash after critical write L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_CRIT_WRITE) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_CRIT_WRITE)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_CRIT_WRITE) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_BEFORE_CRIT_WRITE)) {
             this.crash(this.recoverIn);
             return;
         }
@@ -485,7 +492,8 @@ public class Cache extends Actor {
             newHops.remove(newHops.size() - 1); // remove last element of the hop
 
             // I answer with an error message
-            ResponseMessage responseMessage = new ResponseMessage(null, newHops, msg.queryUUID, Config.RequestType.READ, msg.isCritical, -1);
+            ResponseMessage responseMessage = new ResponseMessage(null, newHops, msg.queryUUID,
+                    Config.RequestType.READ, msg.isCritical, -1);
 
             Logger.logCheck(Level.FINE, this.id, this.getIdFromName(getSender().path().name()),
                     msg.isCritical ? Config.RequestType.CRITREAD : Config.RequestType.READ, true,
@@ -538,13 +546,15 @@ public class Cache extends Actor {
                 Collections.singletonMap(msg.requestKey, -10), getSender());
 
         // Check if the node should crash after critical write L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_CRIT_WRITE) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_CRIT_WRITE)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_CRIT_WRITE) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_CRIT_WRITE)) {
             this.crash(this.recoverIn);
             return;
         }
 
         // Check if the node should crash after write L1 and L2
-        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_WRITE) || (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_WRITE)) {
+        if ((this.isL1 && this.nextCrash == Config.CrashType.L1_AFTER_WRITE) ||
+                (!this.isL1 && this.nextCrash == Config.CrashType.L2_AFTER_WRITE)) {
             this.crash(this.recoverIn);
             return;
         }
@@ -572,12 +582,9 @@ public class Cache extends Actor {
             }
 
             // Whether it has to crash
-            boolean hasToCrash = false;
+            boolean hasToCrash = this.nextCrash == Config.CrashType.L1_DOING_CRITICALUPDATE_MULTICAST;
 
             // Check whether it has to crash
-            if (this.nextCrash == Config.CrashType.L1_DOING_CRITICALUPDATE_MULTICAST) {
-                hasToCrash = true;
-            }
 
             this.multicast(
                     new CriticalUpdateMessage(msg.updatedKey, msg.updatedValue, msg.queryUUID, msg.hops),
@@ -641,7 +648,7 @@ public class Cache extends Actor {
 
     /**
      * Critical Update Response Message handler
-     *
+     * <p>
      * L1 cache tells Ok to the parent if they got all ok from all L2
      * L1 cache tells No to the parent if at least a no is received
      *
@@ -690,7 +697,7 @@ public class Cache extends Actor {
 
     /**
      * Critical Write Response Message handler
-     *
+     * <p>
      * L1 cache forwards COMMIT or ABORT decisions to L2 caches
      *
      * @param msg CriticalWriteResponseMessage
@@ -735,13 +742,10 @@ public class Cache extends Actor {
             }
 
             // Whether it has to crash
-            boolean hasToCrash = false;
+            boolean hasToCrash = (this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_COMMIT_MULTICAST) ||
+                    (!this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_COMMIT_MULTICAST);
 
             // Check whether it has to crash
-            if ((this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_COMMIT_MULTICAST) ||
-                    (!this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_COMMIT_MULTICAST)) {
-                hasToCrash = true;
-            }
 
             // Send commit to the caches with the new sequence number to be updated
             this.multicastAndCheck(
@@ -775,13 +779,10 @@ public class Cache extends Actor {
             }
 
             // Whether it has to crash
-            boolean hasToCrash = false;
+            boolean hasToCrash = (this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_ABORT_MULTICAST) ||
+                    (!this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_ABORT_MULTICAST);
 
             // Check whether it has to crash
-            if ((this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_ABORT_MULTICAST) ||
-                    (!this.isL1 && this.nextCrash == Config.CrashType.L1_DOING_ABORT_MULTICAST)) {
-                hasToCrash = true;
-            }
 
             this.multicastAndCheck(
                     new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, newHops, null),

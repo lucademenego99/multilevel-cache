@@ -61,9 +61,9 @@ You can either use [Gradle](https://gradle.org/) to compile the code or you can 
 
 ### Gradle
 
-> For all the tasks, you can run `gradle tasks`
+> To view every Gradle task available for this project, execute the command `gradle tasks`.
 
-Gradle is used to both keep track of the dependencies of the project and compiling it.
+Gradle is used to both track the project's dependencies and compile it.
 
 #### Build
 
@@ -73,8 +73,9 @@ To compile the project you can run:
 gradle clean build -x test
 ```
 
-> The -x test flag is used in order to avoid the test execution at compile time. 
-> Usually, the test execution is a good idea, however the requested time for the test to complete is around 10 minutes, which may be annoying.
+> The -x test flag is used in order to avoid the test execution at compile time.
+> Usually, the test execution is a good idea, however the requested time for the test to complete is around 10 minutes, 
+> which may be annoying.
 
 #### Run
 
@@ -90,17 +91,20 @@ or you can run directly the produced jar file:
 java -jar build/libs/DS1-project-1.0-VERSION.jar --l1 5 --l2 3 --clients 1 --seconds 25
 ```
 
-int countL1 = 5;
-int countL2 = 5;
-int countClients = 3;
-int secondsForIteration = 20;
+> Defaults are:
+> ```java
+> int countL1 = 5;
+> int countL2 = 5;
+> int countClients = 3;
+> int secondsForIteration = 20;
+> ```
 
 where the command line arguments are:
 
-- clients <Number of clients>: Number of clients connected to the hierarchical distributed cache [default 5]
-- l1 <Number of l1 caches>: Number of L1 caches which will be present in the hierarchical distributed cache
-- l2 <Number of l2 caches>: Number of L2 caches which will be present in the hierarchical distributed cache
-- seconds <Number of seconds per iteration>: Number of seconds each iteration takes
+- **clients** <Number of clients>: Number of clients connected to the hierarchical distributed cache [default 5]
+- **l1** <Number of l1 caches>: Number of L1 caches which will be present in the hierarchical distributed cache
+- **l2** <Number of l2 caches>: Number of L2 caches which will be present in the hierarchical distributed cache
+- **seconds** <Number of seconds per iteration>: Number of seconds each iteration takes
 
 > For more information run either:
 > 
@@ -112,7 +116,7 @@ where the command line arguments are:
 
 #### Documentation
 
-Along with the report, you can generate the documentation of the project running the following gradle task
+Along with the report, you can generate the documentation of the project running the following gradle task:
 
 ```bash
 gradle javadoc
@@ -143,7 +147,7 @@ xdg-open build/reports/tests/test/index.html
 
 ### Docker
 
-The image generated with the Dockerfile uses a multi-stage build in order to limit as much as possible the image size, by first compiling the code with a Gradle image and then run it using a jre one.
+The image generated with the Dockerfile uses a multi-stage build in order to limit as much as possible the image size, by first compiling the code with a Gradle image and then run it using a `jre` one.
 
 #### Docker build
 
@@ -155,8 +159,16 @@ docker build -t ds1:latest .
 
 #### Docker run
 
-To run the application you can run:
+To run the application you can execute:
 
 ```bash
-docker run ds1:latest
+docker run -it -e L1=1 -e L2=1 -e CLIENTS=2 -e SECONDS=5 ds1:latest
 ```
+
+where the behaviour of the environment variables is the same as for the classic execution of the program.
+
+> **Note**: the program **needs** a standard input to work properly; the -it flag is employed 
+> in order to instruct Docker to allocate a pseudo-TTY connected to the container’s stdin.
+> 
+> If this option is not specified the Java [Scanner](https://docs.oracle.com/javase/7/docs/api/java/util/Scanner.html) will be stuck in an infinite loop
+> expecting a keyboard input which will never come.

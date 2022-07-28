@@ -202,20 +202,25 @@ public class Main {
         System.out.println(time + " seconds has passed, do you want to continue? [y/yes - n/no]");
 
         do {
-            // Acquire answer
-            String input = scan.nextLine().trim().toLowerCase();
+            try{
+                // Acquire answer
+                String input = scan.nextLine().trim().toLowerCase();
 
-            // Check the answer
-            if (input.equals("yes") || input.equals("y")) {
-                continuing = true;
-                answer = true;
-            } else if (input.equals("no") || input.equals("n")) {
-                continuing = false;
-                answer = true;
-            } else {
-                // Re-ask
-                System.out.println("Sorry, I could not understand what you have typed, do you want to continue? [y/yes - n/no]");
+                // Check the answer
+                if (input.equals("yes") || input.equals("y")) {
+                    continuing = true;
+                    answer = true;
+                } else if (input.equals("no") || input.equals("n")) {
+                    continuing = false;
+                    answer = true;
+                } else {
+                    // Re-ask
+                    System.out.println("Sorry, I could not understand what you have typed, do you want to continue? [y/yes - n/no]");
+                }
+            } catch(Exception e){
+                System.out.println("Sorry, there was a misunderstanding due to Scanner error, do you want to continue? [y/yes - n/no]");
             }
+
         } while (!answer);
 
         return continuing;

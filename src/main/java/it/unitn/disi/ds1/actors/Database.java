@@ -173,7 +173,8 @@ public class Database extends Actor {
     protected void onWriteMessage(WriteMessage msg) {
         // Value on CRITWRITE
         if (criticalKeyValue.containsKey(msg.requestKey)) {
-            Logger.DEBUG.severe(getSelf().path().name() + " cannot write a message which is on critical update " + msg.requestKey);
+            Logger.DEBUG.severe(getSelf().path().name() + " cannot write a message which is on critical update " +
+                    msg.requestKey);
             // Get the list of hops
             List<ActorRef> newHops = new ArrayList<>(msg.hops);
             // Remove the next hop from the new hops array
@@ -338,7 +339,8 @@ public class Database extends Actor {
             // Got NO, I can abort
             Integer key = this.criticalSessionKey.get(msg.queryUUID);
             Integer value = this.criticalKeyValue.get(key);
-            Logger.DEBUG.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " + key + " value " + value);
+            Logger.DEBUG.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " +
+                    key + " value " + value);
             this.clearCriticalWrite(msg.queryUUID);
             this.multicastAndCheck(
                     new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null),
@@ -386,8 +388,6 @@ public class Database extends Actor {
     @Override
     protected void onRecoveryMessage(RecoveryMessage msg) {
     }
-
-    ;
 
     /**
      * Handler of the messages

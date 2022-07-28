@@ -7,6 +7,11 @@ RUN gradle build -x test
 
 # ===== Run the application =====
 FROM openjdk:8-jre-slim
+# we need to specify default values
+ENV L1=5
+ENV L2=5
+ENV CLIENTS=3
+ENV SECONDS=25
 # Working directory
 WORKDIR /app
 # Copy the built artifacts
@@ -18,4 +23,4 @@ RUN chown -R java-user:java-user /app
 # switch to user
 USER java-user
 # Run the command
-CMD ["java", "-jar", "/app/main.jar"]
+CMD java -jar /app/main.jar --l1 ${L1} --l2 ${L2} --clients ${CLIENTS} --seconds ${SECONDS}

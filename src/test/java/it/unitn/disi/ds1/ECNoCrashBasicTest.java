@@ -47,7 +47,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing the READ functionality")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -61,7 +62,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing the WRITE functionality")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -75,7 +77,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing the CRITREAD functionality")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testCritRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -89,7 +92,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing the CRITWRITE functionality")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testCritWrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -103,7 +107,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a READ after a WRITE on the same key")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testWriteAndRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -125,7 +130,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a Read, Write and Read on the same key")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testReadAndWriteAndRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -156,7 +162,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a READ after a CRITWRITE on the same key")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testCritwriteAndRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -178,7 +185,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a Read, CRITWRITE and Read on the same key")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testReadAndCritwriteAndRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -209,7 +217,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a Read, Write and CRITREAD on the same key")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testReadAndWriteAndCritRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -240,7 +249,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a Read, CRITWRITE and CRITREAD on the same key")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testReadAndCritWriteAndCritRead(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -271,7 +281,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a Read right after a CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testReadRightAfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
@@ -294,7 +305,8 @@ public class ECNoCrashBasicTest {
 
     @DisplayName("Testing a CritRead right after a CRITWRITE")
     @ParameterizedTest
-    @ValueSource(ints = {500}) // Milleseconds to wait
+    @ValueSource(ints = {500})
+        // Milleseconds to wait
     void testCritReadRightAfterCritwrite(int timeToWait) {
         assertTrue(this.database.size() > 0, "Database not initialized");
         int keyToAskFor = (int) this.database.keySet().toArray()[0];
