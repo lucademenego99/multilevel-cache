@@ -354,7 +354,6 @@ public class Cache extends Actor {
         if (msg.values != null) {
             int updatedKey = (Integer) msg.values.keySet().toArray()[0];
             Integer value = (Integer) msg.values.values().toArray()[0];
-            // TODO: maybe we should consider other cases like CRITWRITE
             // If it is a read, we should pull, if it is a write we are listening only if the value is contained in the cache
             if (msg.requestType == Config.RequestType.READ || msg.requestType == Config.RequestType.CRITREAD || this.cachedDatabase.containsKey(updatedKey)) {
                 // Update the value and the corresponding sequence number
@@ -370,7 +369,7 @@ public class Cache extends Actor {
                     // Update cache
                     this.seqnoCache.remove(updatedKey);
                     this.seqnoCache.put(updatedKey, msg.seqno);
-                } else {
+                } else if(msg.requestType != Config.RequestType.READ && msg.requestType != Config.RequestType.CRITREAD) {
                     Logger.DEBUG.severe(getSelf().path().name() + ": not updating the cached value for key " +
                             updatedKey + " value: " + value + " since I got a bigger sequence number " + "current " +
                             currentSeqno + " > " + "received: " + msg.seqno + " current value: " +
@@ -409,8 +408,6 @@ public class Cache extends Actor {
             if (this.nextCrash == Config.CrashType.L1_DOING_WRITEVALUE_MULTICAST) {
                 hasToCrash = true;
             }
-
-            // TODO: here we don't have the requestKey
             this.multicastAndCheck(newResponseMessage, this.caches, msg.requestType,
                     msg.values == null ? null : (int) msg.values.keySet().toArray()[0],
                     msg.values == null ? null : (int) msg.values.values().toArray()[0],
@@ -519,7 +516,6 @@ public class Cache extends Actor {
 
         // Recreating and sending the new write message
         WriteMessage newWriteMessage = new WriteMessage(msg.requestKey, msg.modifiedValue, newHops, uuid, msg.isCritical);
-        // TODO: seqno?
         Logger.logCheck(Level.FINE, this.id, this.getIdFromName(this.parent.path().name()),
                 msg.isCritical ? Config.RequestType.CRITWRITE : Config.RequestType.WRITE, false,
                 msg.requestKey, msg.modifiedValue, -1,
@@ -568,7 +564,7 @@ public class Cache extends Actor {
 
         if (this.isL1) {
             // Send the critical update message to L2 caches - we expect an acknowledgement containing COMMIT/ABORT
-            // TODO, questo può andare in crash? In teoria si, perché non usiamo quello che fa anche il log?
+
             // Crash before
             if (this.nextCrash == Config.CrashType.L1_BEFORE_CRITICALUPDATE_MULTICAST) {
                 this.crash(this.recoverIn);
@@ -770,7 +766,6 @@ public class Cache extends Actor {
             // Got ABORT
             Logger.DEBUG.info(getSelf().path().name() + " got ABORT decision from parent and key " + keyToUpdate);
             this.clearCriticalWrite(msg.queryUUID);
-            // TODO: in all other cases we used seqno -1 when there was an error - is it correct that here null is used?
 
             // Crash before
             if ((this.isL1 && this.nextCrash == Config.CrashType.L1_BEFORE_ABORT_MULTICAST) ||

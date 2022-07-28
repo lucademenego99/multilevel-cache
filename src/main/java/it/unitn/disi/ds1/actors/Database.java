@@ -131,7 +131,6 @@ public class Database extends Actor {
         // Return the sequence number
         Integer seqno = this.seqnoCache.get(msg.requestKey);
 
-        // TODO test whether the null message works
         Map<Integer, Integer> valueToReturn = Collections.singletonMap(msg.requestKey, this.database.get(msg.requestKey));
         // Value on CRITWRITE
         if (criticalKeyValue.containsKey(msg.requestKey)) {
@@ -173,7 +172,6 @@ public class Database extends Actor {
     @Override
     protected void onWriteMessage(WriteMessage msg) {
         // Value on CRITWRITE
-        // TODO
         if (criticalKeyValue.containsKey(msg.requestKey)) {
             Logger.DEBUG.severe(getSelf().path().name() + " cannot write a message which is on critical update " + msg.requestKey);
             // Get the list of hops
@@ -271,7 +269,6 @@ public class Database extends Actor {
         Integer key = this.criticalSessionKey.get(msg.queryUUID);
         Integer value = this.criticalKeyValue.get(key);
         Logger.DEBUG.info(getSelf().path().name() + " Aborting the critical write for " + key + " value " + value);
-        // TODO: we will also need to send the response to the client, hence we need the usual hops etc
         this.multicast(
                 new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null),
                 this.caches
@@ -343,7 +340,6 @@ public class Database extends Actor {
             Integer value = this.criticalKeyValue.get(key);
             Logger.DEBUG.info(getSelf().path().name() + " Aborting, someone answered NO the critical write for " + key + " value " + value);
             this.clearCriticalWrite(msg.queryUUID);
-            // TODO: we will also need to send the response to the client, hence we need the usual hops etc
             this.multicastAndCheck(
                     new CriticalWriteResponseMessage(Config.ACResponse.ABORT, msg.queryUUID, msg.hops, null),
                     this.caches, Config.RequestType.CRITWRITE, key, null, -1, true, msg.queryUUID

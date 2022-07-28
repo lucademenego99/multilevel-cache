@@ -323,9 +323,6 @@ public abstract class Actor extends AbstractActor {
     protected void cancelTimer(UUID timerRequest) {
         Logger.DEBUG.info(getSelf().path().name() + " is cancelling a timeout");
 
-        // TODO: we can remove this, right?
-        Logger.DEBUG.severe("Timer size: " + this.timeoutScheduler.size());
-
         // Cancel the timer
         Cancellable timer = this.timeoutScheduler.get(timerRequest);
         if (timer != null) timer.cancel();

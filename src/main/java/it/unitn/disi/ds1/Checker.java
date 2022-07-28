@@ -48,12 +48,6 @@ public class Checker {
         // Remember which L1 is the parent for each L2
         Map<Integer, Integer> parentOf = new HashMap<>();
 
-        // Remember which CRITWRITE are currently being handled by the database
-        Set<Integer> handledCritWrites = new HashSet<>();
-
-        // Remember if we are expecting some errors due to CRITWRITES for some requests
-        Set<UUID> errorsDueToCritWrites = new HashSet<>();
-
         // All requests
         Map<UUID, LogCheck> requests = new HashMap<>();
 
@@ -98,20 +92,6 @@ public class Checker {
                             if (!requests.containsKey(logCheck.uuid)) {
                                 requests.put(logCheck.uuid, logCheck);
                             }
-
-                            if (logCheck.receiver == 0) {
-                                // If there is already a CRITWRITE on this key
-                                if (handledCritWrites.contains(logCheck.key)) {
-                                    System.out.println("There should be an error due to a CRITWRITE being handled for key " + logCheck.key + " and uuid " + logCheck.uuid);
-                                    errorsDueToCritWrites.add(logCheck.uuid);
-                                }
-                            }
-
-                            if (logCheck.receiver == 0 && logCheck.requestType == Config.RequestType.CRITWRITE) {
-                                // If this is a CRITWRITE request, remember that a CRITWRITE
-                                // is currently handled by the database for the specified key
-                                handledCritWrites.add(logCheck.key);
-                            }
                         } else {
                             // We are dealing with a response, so we need to check that everything is consistent
 
@@ -122,13 +102,6 @@ public class Checker {
                                 // If the response is for the final client who performed the request
                                 if (logCheck.value == null) {
                                     // There was an error
-
-                                    // If the error was due to the fact that a CRITWRITE was handled
-                                    // when the request was received, we expected it!
-                                    if (errorsDueToCritWrites.contains(original.uuid)) {
-                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key + " and uuid " + logCheck.uuid);
-                                    }
-                                    errorsDueToCritWrites.remove(original.uuid);
                                 } else {
                                     // No error - check everything is consistent
                                     switch (original.requestType) {
@@ -170,18 +143,7 @@ public class Checker {
                             } else {
                                 // The response is for another cache
                                 if (logCheck.value == null) {
-                                    // If the error was due to the fact that a CRITWRITE was handled
-                                    // when the request was received, we expected it!
-                                    if (errorsDueToCritWrites.contains(original.uuid)) {
-                                        System.out.println("Error due to CRITWRITE gotten as expected for key " + logCheck.key + " and uuid " + logCheck.uuid);
-                                    }
-                                    errorsDueToCritWrites.remove(original.uuid);
-
-                                    // We got the response from the database, so even if it's an error
-                                    // we have to remove the request from the handledCritWrites
-                                    if (original.requestType == Config.RequestType.CRITWRITE) {
-                                        handledCritWrites.remove(original.key);
-                                    }
+                                    // There was an error
                                 } else {
                                     if (original.requestType == Config.RequestType.WRITE || original.requestType == Config.RequestType.CRITWRITE) {
                                         // We have to check if the returned value is correct
@@ -190,9 +152,6 @@ public class Checker {
                                             database.remove(original.key);
                                             database.put(original.key, logCheck.value);
 
-                                            if (original.requestType == Config.RequestType.CRITWRITE) {
-                                                handledCritWrites.remove(original.key);
-                                            }
                                         } else {
                                             // The sender is an L1 cache, update the value if needed for both sender (L1) and receiver (L2)
                                             if (cachesState.get(logCheck.sender).containsKey(original.key)) {
@@ -220,11 +179,7 @@ public class Checker {
             throw new RuntimeException(e);
         }
 
-        // If we are still expecting some errors due to the CRITWRITES, it means the state is not consistent
-        if (!errorsDueToCritWrites.isEmpty()) {
-            System.err.println("Not consistent - errors due to critwrites is not empty: " + errorsDueToCritWrites);
-        }
-        return errorsDueToCritWrites.isEmpty();
+        return true;
     }
 
     /**
@@ -327,8 +282,5 @@ class LogCheck {
 }
 
 /**
- * OTHER TODOs
- * - put some enums in place of true and false in Checker
- * - maybe let the LogChecker deal with LogCheck(String line)
  * - think alternative ways of implementing CRIT WRITE
  */

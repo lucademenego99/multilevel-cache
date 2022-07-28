@@ -176,9 +176,6 @@ public class Client extends Actor {
         if (!this.shouldReceiveResponse)
             return;
 
-        // Remove the crashed cache from the available caches (the cache becomes unavailable)
-        // this.caches.remove(msg.whoCrashed);
-
         // New UUID
         this.requestUUID = UUID.randomUUID();
 
@@ -234,10 +231,6 @@ public class Client extends Actor {
         // Forward the message to a new cache
         this.caches.get(cacheToAskTo).tell(newMessage, getSelf());
 
-        // TODO: Put check if it's ReadMessage or WriteMessage
-
-        // TODO: I have commented the next line, I don't think we need it because we generate the UUID above
-        // this.requestUUID = UUID.randomUUID();
         // Schedule the timer
         this.scheduleTimer(new TimeoutMessage(msg.msg, this.caches.get(cacheToAskTo)), Config.CLIENT_TIMEOUT, this.requestUUID);
     }

@@ -242,7 +242,7 @@ public class Utils {
         // Random client
         int randomClient = randInt(0, architecture.clients.size() - 1);
         // Key
-        int key = (int) database.keySet().toArray()[0];
+        int key = (int) database.keySet().toArray()[randInt(0, database.keySet().size()-1)];
         // New value
         int newValue = randInt(0, 99);
         switch (message) {

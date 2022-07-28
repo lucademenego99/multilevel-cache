@@ -166,10 +166,7 @@ public class Main {
             timePassedInSeconds += secondsForIteration;
 
             // Small timeout
-            Utils.timeout(maxTimeToWait * 2);
-
-            // TODO do we need this?
-            Utils.timeout(5000);
+            Utils.timeout(maxTimeToWait * 10);
 
             // Ask for repetition
             repeat = askToContinue(timePassedInSeconds);
@@ -223,27 +220,4 @@ public class Main {
 
         return continuing;
     }
-
-    /**
-     * Useful TODOs
-     * TODO: critwrite needs to be implemented
-     * TODO:
-     * - client manda crit write al database
-     * - database manda a tutte le L1 crit_update con il valore aspetta un acknowledgement, manda errore a tutte le write/read/crit_write per quel valore
-     *   [ fa partire un timeout, se finisce manda un abort a tutte le L1 e non fa commit del suo vecchio valore ]
-     * - L1 manda crit_update alle L2 e aspetta un acknowledgement (blocca le read al valore nel crit_update) [ fa partire un timeout ]
-     *   [ se finisce manda un abort al database ]
-     * - L2 blocca la read del valore nella crit_update e lo tiene in una mappa, manda un acknowledgement a L1
-     * - L1 aspetta tutti gli acknowledgment e manda uno al database
-     * - database: appena ricevuto quello fa commit di quel valore (sappiamo che nessuno lo manderà ancora) e è tranquillo di andare
-     * - database: manda commit a tutte le L1 (database si sblocca) e fa update
-     * - L1 si sblocca e manda a L2 il commit e fa l'update e manda commit a tutte le L1 (database si sblocca) e fa
-     *
-     * In entrambi i casi:
-     * - se riceve abort un processo -> non fa commit del valore nella cache
-     * - se un processo va in crash, svuota la cache e esce dalla procedura,
-     * nessun problema se un client chiede un valore al processo anche quando gli altri non se ne sono accorti che è in crash,
-     * perché farà in caso (per il valore bloccato)  una richiesta al padre che può rispondergli errore (da implementare, on response della cache, risposta null ricevuta)
-     * Mentre, se il database o il padre hanno fatto commit, allora nessun problema
-     */
 }
