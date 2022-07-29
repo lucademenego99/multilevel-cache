@@ -190,6 +190,9 @@ public class Utils {
             case L1_BEFORE_CRITICALUPDATE_MULTICAST:
             case L1_AFTER_CRITICALUPDATE_MULTICAST:
             case L1_DOING_CRITICALUPDATE_MULTICAST:
+            case L1_BEFORE_FLUSH_MULTICAST:
+            case L1_DOING_FLUSH_MULTICAST:
+            case L1_AFTER_FLUSH_MULTICAST:
                 // Select random L1 cache
                 int randomCache = randInt(0, architecture.cacheTree.database.children.toArray().length - 1);
                 // Schedule the crash

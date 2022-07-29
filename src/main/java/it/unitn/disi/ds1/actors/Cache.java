@@ -924,9 +924,31 @@ public class Cache extends Actor {
          * caches
          */
         if (this.isL1) {
-            // TODO questa è un assunzione enorme, ma dobbiamo farla, altrimenti non funzionerebbe nulla. Ricordarsi nel report
-            this.multicast(new FlushMessage(), this.caches);
-            Logger.DEBUG.info(getSelf().path().name() + " L1 recovery: flushing the cache and multicast flush with ID " + this.id);
+            // Crash before
+            if (this.nextCrash == Config.CrashType.L1_BEFORE_FLUSH_MULTICAST) {
+                this.crash(this.recoverIn);
+                return;
+            }
+
+            // Whether it has to crash
+            boolean hasToCrash = this.nextCrash == Config.CrashType.L1_DOING_FLUSH_MULTICAST;
+
+            // Multicast with possible crashes
+            this.multicast(new FlushMessage(), this.caches, hasToCrash);
+            Logger.DEBUG.info(getSelf().path().name() +
+                    " L1 recovery: flushing the cache and multicast flush with ID " + this.id);
+
+            // Has to crash
+            if (hasToCrash) {
+                return;
+            }
+
+            // Crash after
+            if (this.nextCrash == Config.CrashType.L1_AFTER_FLUSH_MULTICAST) {
+                this.crash(this.recoverIn);
+                return;
+            }
+
         } else {
             Logger.DEBUG.info(getSelf().path().name() + " L2 recovery: flushing the cache with ID " + this.id);
         }

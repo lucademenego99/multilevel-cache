@@ -162,7 +162,7 @@ docker build -t ds1:latest .
 To run the application you can execute:
 
 ```bash
-docker run -it -e L1=1 -e L2=1 -e CLIENTS=2 -e SECONDS=5 ds1:latest
+docker run -it -e L1=5 -e L2=3 -e CLIENTS=1 -e SECONDS=25 ds1:latest
 ```
 
 where the behaviour of the environment variables is the same as for the classic execution of the program.
