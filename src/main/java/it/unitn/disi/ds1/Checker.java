@@ -86,21 +86,19 @@ public class Checker {
                         cachesState.get(logCheck.sender).clear();
                     } else {
                         if (!logCheck.isResponse) {
-                            // If it's a request, store it in a map where the key is the request's UUID
+                            // REQUEST - store it in a map where the key is the request's UUID
                             if (!requests.containsKey(logCheck.uuid)) {
                                 requests.put(logCheck.uuid, logCheck);
                             }
                         } else {
-                            // We are dealing with a response, so we need to check that everything is consistent
+                            // RESPONSE - check that everything is consistent
 
                             // Get the original request
                             LogCheck original = requests.get(logCheck.uuid);
 
                             if (Objects.equals(logCheck.receiver, original.sender)) {
                                 // If the response is for the final client who performed the request
-                                if (logCheck.value == null) {
-                                    // There was an error
-                                } else {
+                                if (logCheck.value != null) {
                                     // No error - check everything is consistent
                                     switch (original.requestType) {
                                         case READ:
@@ -125,9 +123,6 @@ public class Checker {
                                                 }
                                             }
                                             break;
-                                        case WRITE:
-                                            // Nothing to do here?
-                                            break;
                                         case CRITREAD:
                                             // It should return the correct value from the database
                                             if (!Objects.equals(database.get(original.key), logCheck.value)) {
@@ -135,16 +130,14 @@ public class Checker {
                                                 return false;
                                             }
                                             break;
-                                        case CRITWRITE:
-                                            // Nothing to do here?
+                                        default:
                                             break;
                                     }
                                 }
                             } else {
                                 // The response is for another cache
-                                if (logCheck.value == null) {
-                                    // There was an error
-                                } else {
+                                if (logCheck.value != null) {
+                                    // There was no error
                                     if (original.requestType == Config.RequestType.WRITE ||
                                             original.requestType == Config.RequestType.CRITWRITE) {
                                         // We have to check if the returned value is correct

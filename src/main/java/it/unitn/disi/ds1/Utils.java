@@ -21,9 +21,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Class containing some statically exposed useful functions
+ */
 public class Utils {
     /**
-     * Creates the actor system
+     * Create the actor system
      *
      * @return Akka Actor System
      */
@@ -137,7 +140,7 @@ public class Utils {
     }
 
     /**
-     * Returns a pseudo-random number between min and max, inclusive.
+     * Return a pseudo-random number between min and max, inclusive.
      * The difference between min and max can be at most
      * <code>Integer.MAX_VALUE - 1</code>.
      *
@@ -152,7 +155,7 @@ public class Utils {
     }
 
     /**
-     * Sends a random crash message in a random time bounded within a lower and upper bound
+     * Send a random crash message in a random time bounded within a lower and upper bound
      *
      * @param system                 Actor system
      * @param architecture           Actor architecture
@@ -230,7 +233,7 @@ public class Utils {
     }
 
     /**
-     * Sends a random message
+     * Send a random message
      *
      * @param system                 Actor system
      * @param architecture           Actor architecture
