@@ -4,10 +4,9 @@ import java.util.Random;
 
 /**
  * General configuration class
- * <p>
+ *
  * Here there will be listed all the configuration which can be employed for the
  * program
- * <p>
  */
 public class Config {
     /**

@@ -106,8 +106,9 @@ public class Cache extends Actor {
      * Cache constructor, by default the cache is an L2
      * Initialize all variables
      *
-     * @param id     Cache identifier
-     * @param parent Reference to the parent actor
+     * @param id        Cache identifier
+     * @param parent    Reference to the parent actor
+     * @param database  Reference to the database
      */
     public Cache(int id, ActorRef parent, ActorRef database) {
         super(id);
@@ -1006,6 +1007,8 @@ public class Cache extends Actor {
      * @param seqno          sequence number linked with the given message
      * @param isCritical     is the message critical?
      * @param crash          whether it has to crash
+     * @param requestType    request type
+     * @param queryID        query identifier UUID
      */
     protected void multicastAndCheck(
             Message msg,

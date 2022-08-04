@@ -96,6 +96,8 @@ public abstract class Actor extends AbstractActor {
      * @param value          value linked with the given message
      * @param seqno          sequence number linked with the given message
      * @param isCritical     is the message critical?
+     * @param requestType    request type
+     * @param queryID        query identifier UUID
      */
     protected void multicastAndCheck(
             Message msg,

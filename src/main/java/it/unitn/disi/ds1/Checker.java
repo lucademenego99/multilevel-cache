@@ -10,11 +10,10 @@ import java.util.UUID;
 
 /**
  * Checker class
- * <p>
+ *
  * This class checks the log file 'logs.txt' verifying whether in the last run
  * the program behaved correctly without any inconsistencies with respect to the
  * project requirements
- * <p>
  */
 public class Checker {
 

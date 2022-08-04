@@ -47,6 +47,7 @@ public class Client extends Actor {
     /**
      * Client constructor
      * Initialize the target cache servers with an empty array
+     * @param id    identifier
      */
     public Client(int id) {
         super(id);

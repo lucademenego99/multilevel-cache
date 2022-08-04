@@ -167,7 +167,7 @@ public class Database extends Actor {
      * The function overrides the element in the database
      * and sends the update to all the cache using multicast
      *
-     * @param msg
+     * @param msg   write message
      */
     @Override
     protected void onWriteMessage(WriteMessage msg) {
@@ -278,11 +278,11 @@ public class Database extends Actor {
 
     /**
      * Collects the acknowledgment from the caches:
-     * CriticalUpdateResponseMessage -> Config.CUResponse.OK
-     * If all agree -> commit, if someone does not -> ABORT
+     * CriticalUpdateResponseMessage should collect Config.CUResponse.OK
+     * If all agree then commit, if someone does not then ABORT
      * The Commit and Abort messages are CriticalWriteResponseMessage
      *
-     * @param msg
+     * @param msg   critical update message
      */
     protected void onCriticalUpdateResponseMessage(CriticalUpdateResponseMessage msg) {
         // If this.criticalSessionKey doesn't contain msg.queryUUID, it means the database

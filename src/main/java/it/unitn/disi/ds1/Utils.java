@@ -239,6 +239,7 @@ public class Utils {
      * @param architecture           Actor architecture
      * @param lowerBoundMilliseconds lowerbound in millis
      * @param upperBoundMilliseconds upperbound in millis
+     * @param database               database content
      */
     public static void randomMessage(ActorSystem system, Architecture architecture, Map<Integer, Integer> database,
                                      Integer lowerBoundMilliseconds, Integer upperBoundMilliseconds) {

@@ -82,6 +82,7 @@ public class Logger {
      * @param value              value of the message
      * @param seqNo              sequence number of the data
      * @param message            message additional
+     * @param queryID            query identifier UUID
      */
     public static void logCheck(
             Level logLevel,

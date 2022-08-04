@@ -59,6 +59,7 @@ public class ResponseMessage extends Message {
      * @param uuid        unique identifier of the request
      * @param requestType type of request
      * @param seqno       sequence number
+     * @param isCritical is critical
      */
     public ResponseMessage(Map<Integer, Integer> values, List<ActorRef> hops, UUID uuid, Config.RequestType requestType, boolean isCritical, int seqno) {
         this.isCritical = isCritical;

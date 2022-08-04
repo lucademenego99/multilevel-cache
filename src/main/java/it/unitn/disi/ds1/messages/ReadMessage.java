@@ -47,6 +47,7 @@ public class ReadMessage extends Message {
      * @param hops       list of hops traveled by the message
      * @param uuid       query uuid
      * @param seqno      sequence number
+     * @param isCritical is critical
      */
     public ReadMessage(int requestKey, List<ActorRef> hops, UUID uuid, boolean isCritical, int seqno) {
         this.isCritical = isCritical;
